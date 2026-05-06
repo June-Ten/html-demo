@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>flex:1 配合 min-height:0 效果演示</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .demo-container {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .demo-box {
+      width: 300px;
+    }
+
+    .demo-box h3 {
+      margin-bottom: 10px;
+      color: #666;
+      font-size: 14px;
+    }
+
+    /* 外层容器 - 固定高度 */
+    .outer {
+      height: 300px;
+      border: 3px solid #333;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+    }
+
+    .header {
+      background: #4CAF50;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    /* 中间层 - 这是关键！ */
+    .middle-problem {
+      flex: 1;
+      /* 没有 min-height: 0，会被内容撑开 */
+      display: flex;
+      flex-direction: column;
+      background: #e3f2fd;
+    }
+
+    .middle-solution {
+      flex: 1;
+      min-height: 0;  /* 关键！允许收缩 */
+      display: flex;
+      flex-direction: column;
+      background: #e8f5e9;
+    }
+
+    /* 内层滚动区域 */
+    .scroll-area {
+      flex: 1;
+      overflow: auto;
+    }
+
+    .inner-content {
+      padding: 15px;
+    }
+
+    .inner-content p {
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+
+    .footer {
+      background: #2196F3;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    /* 说明区域 */
+    .explanation {
+      max-width: 800px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .explanation h2 {
+      color: #333;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+
+    .explanation h3 {
+      color: #555;
+      margin: 20px 0 10px;
+    }
+
+    .explanation p {
+      line-height: 1.8;
+      color: #666;
+      margin-bottom: 15px;
+    }
+
+    .explanation code {
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Consolas', monospace;
+      color: #e91e63;
+    }
+
+    .code-block {
+      background: #2d2d2d;
+      color: #f8f8f2;
+      padding: 20px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 15px 0;
+    }
+
+    .code-block code {
+      background: none;
+      color: #f8f8f2;
+      padding: 0;
+    }
+
+    .highlight {
+      background: #ffeb3b;
+      padding: 2px 4px;
+    }
+
+    .key-point {
+      background: #fff3e0;
+      border-left: 4px solid #ff9800;
+      padding: 15px 20px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>flex:1 配合 min-height:0 效果演示</h1>
+
+  <div class="demo-container">
+    <!-- 问题演示：嵌套flex，中间层没有 min-height:0 -->
+    <div class="demo-box">
+      <h3>❌ 嵌套flex，中间层无 min-height:0</h3>
+      <div class="outer">
+        <div class="header">Header</div>
+        <div class="middle-problem">
+          <div class="scroll-area">
+            <div class="inner-content">
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+            </div>
+          </div>
+        </div>
+        <div class="footer">Footer（被挤出去了）</div>
+      </div>
+    </div>
+
+    <!-- 解决方案：中间层添加 min-height:0 -->
+    <div class="demo-box">
+      <h3>✅ 中间层添加 min-height:0</h3>
+      <div class="outer">
+        <div class="header">Header</div>
+        <div class="middle-solution">
+          <div class="scroll-area">
+            <div class="inner-content">
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+              <p>这是一段很长的内容...</p>
+            </div>
+          </div>
+        </div>
+        <div class="footer">Footer（正常显示）</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="explanation">
+    <h2>原理解释</h2>
+
+    <h3>问题根源</h3>
+    <p>
+      问题出现在<strong>嵌套的 flex 容器</strong>中。当一个 flex 子项本身也是 flex 容器时，
+      它的 <code>min-height</code> 默认值是 <code>auto</code>，会被其内容撑开。
+    </p>
+
+    <div class="key-point">
+      <strong>关键场景：</strong>外层 flex 容器 → 中间层 flex 子项（也是 flex 容器）→ 内层滚动区域。<br>
+      如果中间层没有 <code>min-height: 0</code>，它会被内容撑开，导致外层容器溢出。
+    </div>
+
+    <h3>结构示意</h3>
+    <div class="code-block">
+<code>&lt;div class="outer"&gt;           /* 固定高度的 flex 容器 */
+  &lt;div class="header"&gt;...&lt;/div&gt;
+  &lt;div class="middle"&gt;        /* flex:1 的子项，也是 flex 容器 */
+    &lt;div class="scroll-area"&gt; /* 需要滚动的区域 */
+      ...很多内容...
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class="footer"&gt;...&lt;/div&gt;
+&lt;/div&gt;</code>
+    </div>
+
+    <h3>解决方案</h3>
+    <p>
+      设置 <code>min-height: 0</code> 可以覆盖默认的 <code>auto</code> 值，
+      让 flex 子项可以收缩到比其内容更小的尺寸，从而让 <code>overflow: auto</code> 生效。
+    </p>
+
+    <div class="code-block">
+<code>.middle {
+  flex: 1;           /* 占据剩余空间 */
+  <span class="highlight">min-height: 0;</span>    /* 关键！允许收缩到比内容更小 */
+  display: flex;
+  flex-direction: column;
+}
+
+.scroll-area {
+  flex: 1;
+  overflow: auto;    /* 内容溢出时显示滚动条 */
+}</code>
+    </div>
+
+    <h3>flex:1 的含义</h3>
+    <p><code>flex: 1</code> 是以下三个属性的简写：</p>
+    <div class="code-block">
+<code>flex: 1;
+/* 等同于 */
+flex-grow: 1;    /* 可以放大 */
+flex-shrink: 1;  /* 可以收缩 */
+flex-basis: 0%;  /* 基础尺寸为0 */</code>
+    </div>
+
+    <h3>常见应用场景</h3>
+    <p>这个技巧在以下场景特别有用：</p>
+    <ul style="margin-left: 20px; line-height: 2;">
+      <li>固定头部/底部，中间内容区域可滚动的布局</li>
+      <li>侧边栏 + 主内容区域的布局</li>
+      <li>嵌套的 flex 容器中需要滚动的区域</li>
+      <li>聊天界面、列表页面等需要局部滚动的场景</li>
+    </ul>
+
+    <h3>水平方向同理</h3>
+    <p>
+      如果是水平方向的 flex 布局（<code>flex-direction: row</code>），
+      则需要设置 <code>min-width: 0</code> 来解决类似问题。
+    </p>
+  </div>
+</body>
+</html>

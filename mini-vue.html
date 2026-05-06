@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mini-vue</title>
+</head>
+<body>
+  <script>
+    let activeEffect = null
+    class Dep {
+      constructor() {
+        this.subs = new Set()
+        this.count = 0
+      }
+
+      depend() {
+        if (activeEffect) {
+          this.count++
+          this.subs.add(activeEffect)
+        }
+      }
+
+      notify() {
+        this.subs.forEach(sub => sub())
+      }
+    }
+
+    function reactive(obj) {
+      Object.keys(obj).forEach(key => {
+        let value = obj[key]
+        const dep = new Dep()
+        Object.defineProperty(obj, key, {
+          get() {
+            if (activeEffect) {
+              dep.depend()
+            }
+            return value
+          },
+          set(newValue) {
+            value = newValue
+            dep.notify()
+          }
+        })
+      })
+      return obj
+    }
+
+    function effect(fn) {
+      activeEffect = fn
+      fn()
+      activeEffect = null
+    }
+
+    function computed(getter) {
+      let value
+      let dirty = true
+
+      // 依赖收集 类实例化
+      const dep = new Dep()
+
+      // 懒计算函数
+      const runner = () => {
+        if (dirty) {
+          value = getter()
+          dirty = false
+        }
+        return value
+      }
+
+      effect(() => {
+        getter()
+        dirty = true
+        dep.notify()
+      })
+
+      return {
+        get value() {
+          dep.depend()
+          return runner()
+        }
+      }
+
+    }
+
+    const state = reactive({ count: 0 })
+
+    // effect(() => {
+    //   document.body.innerText = state.count
+    // })
+
+    // // reactive → effect → getter 收集 → setter 触发
+
+    setInterval(() => {
+      state.count++   // 页面自动更新
+    }, 1000)
+
+
+    const double = computed(() => state.count * 2)
+    effect(() => {
+      console.log('double', double.value)
+    })
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AntV G6 思维链推导动画</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: rgba(9, 25, 48, 0.74);
+      --cyan: #25d9ff;
+      --blue: #3f7cff;
+      --text: #eaf8ff;
+      --muted: rgba(199, 232, 255, 0.66);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      color: var(--text);
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 22% 16%, rgba(37, 217, 255, 0.22), transparent 32%),
+        radial-gradient(circle at 80% 76%, rgba(63, 124, 255, 0.24), transparent 34%),
+        linear-gradient(135deg, #04101e 0%, #071a34 48%, #020710 100%);
+    }
+
+    .page {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      padding: 34px;
+    }
+
+    .page::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(37, 217, 255, 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(37, 217, 255, 0.07) 1px, transparent 1px);
+      background-size: 34px 34px;
+      mask-image: radial-gradient(circle at center, #000 24%, transparent 78%);
+      -webkit-mask-image: radial-gradient(circle at center, #000 24%, transparent 78%);
+    }
+
+    header {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 22px;
+    }
+
+    .title h1 {
+      font-size: clamp(28px, 4vw, 52px);
+      font-weight: 700;
+      letter-spacing: 6px;
+      text-shadow: 0 0 18px rgba(37, 217, 255, 0.68);
+    }
+
+    .title p {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    .status {
+      min-width: 260px;
+      padding: 16px 18px;
+      background: var(--panel);
+      border: 1px solid rgba(37, 217, 255, 0.28);
+      border-radius: 18px;
+      box-shadow: 0 0 34px rgba(37, 217, 255, 0.12), inset 0 0 28px rgba(37, 217, 255, 0.06);
+      backdrop-filter: blur(14px);
+    }
+
+    .status-label {
+      color: var(--cyan);
+      font-size: 12px;
+      letter-spacing: 3px;
+    }
+
+    .status-text {
+      margin-top: 8px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .progress {
+      height: 6px;
+      margin-top: 14px;
+      overflow: hidden;
+      background: rgba(158, 210, 255, 0.12);
+      border-radius: 999px;
+    }
+
+    .progress-bar {
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+      border-radius: inherit;
+      box-shadow: 0 0 18px rgba(37, 217, 255, 0.78);
+      transition: width 0.45s ease;
+    }
+
+    .canvas-shell {
+      position: relative;
+      z-index: 1;
+      height: calc(100% - 130px);
+      min-height: 560px;
+      overflow: hidden;
+      background:
+        linear-gradient(135deg, rgba(12, 33, 64, 0.78), rgba(4, 11, 24, 0.64)),
+        radial-gradient(circle at center, rgba(37, 217, 255, 0.12), transparent 56%);
+      border: 1px solid rgba(37, 217, 255, 0.25);
+      border-radius: 26px;
+      box-shadow: 0 26px 80px rgba(0, 0, 0, 0.34), inset 0 0 42px rgba(37, 217, 255, 0.07);
+    }
+
+    .canvas-shell::before,
+    .canvas-shell::after {
+      content: "";
+      position: absolute;
+      width: 150px;
+      height: 150px;
+      pointer-events: none;
+      border-color: rgba(37, 217, 255, 0.72);
+      border-style: solid;
+      filter: drop-shadow(0 0 8px rgba(37, 217, 255, 0.7));
+    }
+
+    .canvas-shell::before {
+      top: 18px;
+      left: 18px;
+      border-width: 2px 0 0 2px;
+      border-radius: 18px 0 0 0;
+    }
+
+    .canvas-shell::after {
+      right: 18px;
+      bottom: 18px;
+      border-width: 0 2px 2px 0;
+      border-radius: 0 0 18px 0;
+    }
+
+    #container {
+      width: 100%;
+      height: 100%;
+    }
+
+    .controls {
+      position: absolute;
+      left: 26px;
+      bottom: 24px;
+      z-index: 3;
+      display: flex;
+      gap: 12px;
+    }
+
+    button {
+      min-width: 108px;
+      height: 40px;
+      color: #ecfbff;
+      cursor: pointer;
+      background: linear-gradient(135deg, rgba(37, 217, 255, 0.24), rgba(63, 124, 255, 0.24));
+      border: 1px solid rgba(37, 217, 255, 0.45);
+      border-radius: 999px;
+      box-shadow: 0 0 18px rgba(37, 217, 255, 0.18);
+      letter-spacing: 2px;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(37, 217, 255, 0.9);
+      box-shadow: 0 0 24px rgba(37, 217, 255, 0.34);
+    }
+
+    .legend {
+      position: absolute;
+      right: 28px;
+      bottom: 28px;
+      z-index: 3;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 2px;
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        padding: 20px;
+      }
+
+      header {
+        display: block;
+      }
+
+      .status {
+        margin-top: 18px;
+      }
+
+      .canvas-shell {
+        height: calc(100% - 190px);
+        min-height: 480px;
+      }
+
+      .legend {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <section class="title">
+        <h1>思维链推导过程</h1>
+        <p>Sequential Reasoning Flow · AntV G6</p>
+      </section>
+
+      <aside class="status">
+        <div class="status-label">CURRENT STEP</div>
+        <div id="statusText" class="status-text">等待开始</div>
+        <div class="progress">
+          <div id="progressBar" class="progress-bar"></div>
+        </div>
+      </aside>
+    </header>
+
+    <section class="canvas-shell">
+      <div id="container"></div>
+      <div class="controls">
+        <button id="playBtn">开始演示</button>
+        <button id="resetBtn">重置</button>
+      </div>
+      <div class="legend">节点出现前，连线会先完成成长动画</div>
+    </section>
+  </main>
+
+  <script src="https://gw.alipayobjects.com/os/lib/antv/g6/4.8.24/dist/g6.min.js"></script>
+  <script>
+    const container = document.getElementById("container");
+    const statusText = document.getElementById("statusText");
+    const progressBar = document.getElementById("progressBar");
+    const playBtn = document.getElementById("playBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    const edgeDuration = 1200;
+    const nodeDuration = 520;
+    let isPlaying = false;
+    let timers = [];
+
+    const steps = [
+      {
+        id: "start",
+        label: "开始",
+        desc: "接收问题",
+        x: 120,
+        y: 250,
+        type: "start"
+      },
+      {
+        id: "observe",
+        label: "观察输入",
+        desc: "识别主题与目标",
+        x: 330,
+        y: 160
+      },
+      {
+        id: "extract",
+        label: "提取条件",
+        desc: "整理关键信息",
+        x: 560,
+        y: 250
+      },
+      {
+        id: "reason",
+        label: "建立关系",
+        desc: "串联因果路径",
+        x: 790,
+        y: 160
+      },
+      {
+        id: "verify",
+        label: "校验推导",
+        desc: "检查一致性",
+        x: 1010,
+        y: 250
+      },
+      {
+        id: "answer",
+        label: "输出结论",
+        desc: "形成最终答案",
+        x: 1230,
+        y: 160,
+        type: "end"
+      }
+    ];
+
+    G6.registerNode("tech-card", {
+      draw(cfg, group) {
+        const width = 154;
+        const height = 76;
+        const isStart = cfg.type === "start";
+        const isEnd = cfg.type === "end";
+        const baseOpacity = cfg.visible === false ? 0 : 1;
+        const mainColor = isStart ? "#25d9ff" : isEnd ? "#79f2b2" : "#6ea8ff";
+
+        const keyShape = group.addShape("rect", {
+          name: "card-bg",
+          attrs: {
+            x: -width / 2,
+            y: -height / 2,
+            width,
+            height,
+            radius: 18,
+            fill: "rgba(8, 30, 63, 0.92)",
+            stroke: mainColor,
+            lineWidth: 1.6,
+            shadowColor: mainColor,
+            shadowBlur: 22,
+            opacity: baseOpacity
+          }
+        });
+
+        group.addShape("rect", {
+          name: "card-top-line",
+          attrs: {
+            x: -width / 2 + 18,
+            y: -height / 2,
+            width: width - 36,
+            height: 3,
+            radius: 2,
+            fill: mainColor,
+            opacity: baseOpacity
+          }
+        });
+
+        group.addShape("text", {
+          name: "card-title",
+          attrs: {
+            x: 0,
+            y: -8,
+            text: cfg.label,
+            fill: "#ffffff",
+            fontSize: 18,
+            fontWeight: 700,
+            textAlign: "center",
+            textBaseline: "middle",
+            opacity: baseOpacity
+          }
+        });
+
+        group.addShape("text", {
+          name: "card-desc",
+          attrs: {
+            x: 0,
+            y: 20,
+            text: cfg.desc,
+            fill: "rgba(213, 240, 255, 0.72)",
+            fontSize: 12,
+            textAlign: "center",
+            textBaseline: "middle",
+            opacity: baseOpacity
+          }
+        });
+
+        return keyShape;
+      }
+    });
+
+    G6.registerEdge("growth-line", {
+      draw(cfg, group) {
+        const start = cfg.startPoint;
+        const end = cfg.endPoint;
+        const dx = end.x - start.x;
+        const controlOffset = Math.max(54, Math.abs(dx) * 0.18);
+        const path = [
+          ["M", start.x, start.y],
+          ["C", start.x + controlOffset, start.y, end.x - controlOffset, end.y, end.x, end.y]
+        ];
+
+        group.addShape("path", {
+          name: "edge-glow",
+          attrs: {
+            path,
+            stroke: "rgba(37, 217, 255, 0.18)",
+            lineWidth: 10,
+            lineCap: "round",
+            opacity: 0.88
+          }
+        });
+
+        const keyShape = group.addShape("path", {
+          name: "edge-growth",
+          attrs: {
+            path,
+            stroke: cfg.color || "#25d9ff",
+            lineWidth: 3,
+            lineCap: "round",
+            endArrow: {
+              path: G6.Arrow.triangle(8, 10, 0),
+              fill: cfg.color || "#25d9ff"
+            },
+            shadowColor: cfg.color || "#25d9ff",
+            shadowBlur: 16
+          }
+        });
+
+        const pulse = group.addShape("circle", {
+          name: "edge-pulse",
+          attrs: {
+            x: start.x,
+            y: start.y,
+            r: 4.5,
+            fill: "#ffffff",
+            shadowColor: cfg.color || "#25d9ff",
+            shadowBlur: 18,
+            opacity: 0
+          }
+        });
+
+        keyShape.toFront();
+        pulse.toFront();
+        return keyShape;
+      },
+      afterDraw(cfg, group) {
+        const pathShape = group.find((shape) => shape.get("name") === "edge-growth");
+        const pulse = group.find((shape) => shape.get("name") === "edge-pulse");
+        const totalLength = pathShape.getTotalLength();
+        const duration = cfg.duration || edgeDuration;
+
+        pathShape.attr({
+          lineDash: [totalLength, totalLength],
+          lineDashOffset: totalLength
+        });
+
+        pathShape.animate(
+          (ratio) => ({
+            lineDashOffset: totalLength * (1 - ratio)
+          }),
+          {
+            duration,
+            easing: "easeCubic"
+          }
+        );
+
+        pulse.animate(
+          (ratio) => {
+            const point = pathShape.getPoint(ratio);
+            return {
+              x: point.x,
+              y: point.y,
+              opacity: ratio < 0.98 ? 1 : 0,
+              r: 4.5 + Math.sin(ratio * Math.PI) * 2.5
+            };
+          },
+          {
+            duration,
+            easing: "easeCubic"
+          }
+        );
+      }
+    });
+
+    const graph = new G6.Graph({
+      container,
+      width: container.clientWidth,
+      height: container.clientHeight,
+      fitView: true,
+      fitViewPadding: [80, 90, 110, 90],
+      renderer: "canvas",
+      modes: {
+        default: ["drag-canvas", "zoom-canvas"]
+      },
+      defaultNode: {
+        type: "tech-card"
+      },
+      defaultEdge: {
+        type: "growth-line"
+      }
+    });
+
+    function wait(ms) {
+      return new Promise((resolve) => {
+        const id = setTimeout(resolve, ms);
+        timers.push(id);
+      });
+    }
+
+    function clearTimers() {
+      timers.forEach((id) => clearTimeout(id));
+      timers = [];
+    }
+
+    function setProgress(index) {
+      const percent = Math.round((index / (steps.length - 1)) * 100);
+      progressBar.style.width = `${percent}%`;
+    }
+
+    function revealNode(id) {
+      const item = graph.findById(id);
+      if (!item) return;
+
+      const group = item.getContainer();
+      group.get("children").forEach((shape) => {
+        const name = shape.get("name");
+        const targetOpacity = name === "card-desc" ? 0.72 : 1;
+        shape.animate(
+          (ratio) => ({
+            opacity: targetOpacity * ratio
+          }),
+          {
+            duration: nodeDuration,
+            easing: "easeCubic"
+          }
+        );
+      });
+    }
+
+    function addHiddenNode(step) {
+      graph.addItem("node", {
+        ...step,
+        visible: false
+      });
+    }
+
+    function addGrowthEdge(from, to, index) {
+      graph.addItem("edge", {
+        id: `edge-${from.id}-${to.id}`,
+        source: from.id,
+        target: to.id,
+        color: to.type === "end" ? "#79f2b2" : "#25d9ff",
+        duration: edgeDuration,
+        label: `STEP ${String(index).padStart(2, "0")}`,
+        labelCfg: {
+          autoRotate: true,
+          style: {
+            fill: "rgba(213, 240, 255, 0.72)",
+            fontSize: 10,
+            background: {
+              fill: "rgba(4, 12, 28, 0.82)",
+              padding: [3, 6, 3, 6],
+              radius: 6
+            }
+          }
+        }
+      });
+    }
+
+    function initGraph() {
+      clearTimers();
+      isPlaying = false;
+      playBtn.textContent = "开始演示";
+      statusText.textContent = "等待开始";
+      setProgress(0);
+
+      graph.clear();
+      graph.addItem("node", steps[0]);
+      statusText.textContent = "开始";
+      graph.fitView(80);
+    }
+
+    async function play() {
+      if (isPlaying) return;
+      isPlaying = true;
+      playBtn.textContent = "演示中";
+
+      for (let i = 1; i < steps.length; i++) {
+        const prev = steps[i - 1];
+        const next = steps[i];
+
+        statusText.textContent = `${prev.label} → ${next.label}`;
+        addHiddenNode(next);
+        addGrowthEdge(prev, next, i);
+        graph.fitView(80);
+
+        await wait(edgeDuration + 120);
+        revealNode(next.id);
+        statusText.textContent = next.label;
+        setProgress(i);
+        await wait(nodeDuration + 180);
+      }
+
+      statusText.textContent = "推导完成";
+      playBtn.textContent = "重新演示";
+      isPlaying = false;
+    }
+
+    playBtn.addEventListener("click", () => {
+      if (playBtn.textContent === "重新演示") {
+        initGraph();
+      }
+      play();
+    });
+
+    resetBtn.addEventListener("click", initGraph);
+
+    window.addEventListener("resize", () => {
+      graph.changeSize(container.clientWidth, container.clientHeight);
+      graph.fitView(80);
+    });
+
+    initGraph();
+  </script>
+</body>
+</html>

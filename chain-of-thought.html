@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>思维链推导 · Chain of Thought</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-light: #60a5fa;
+            --primary-deep: #1d4ed8;
+            --ink: #0f172a;
+            --ink-soft: #475569;
+            --line: #cfe0ff;
+            --bg-1: #f5f9ff;
+            --bg-2: #e8f1ff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            min-height: 100vh;
+            background:
+                radial-gradient(1200px 600px at 10% 0%, #e1edff 0%, transparent 60%),
+                radial-gradient(800px 400px at 100% 100%, #d8e8ff 0%, transparent 60%),
+                linear-gradient(180deg, var(--bg-1), var(--bg-2));
+            color: var(--ink);
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+                "Microsoft YaHei", "Helvetica Neue", sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* ====== Header ====== */
+        header {
+            padding: 56px 24px 24px;
+            text-align: center;
+        }
+        header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: 6px;
+            background: linear-gradient(90deg, #1d4ed8, #3b82f6, #60a5fa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        header .sub {
+            margin-top: 8px;
+            font-size: 12px;
+            letter-spacing: 4px;
+            color: var(--ink-soft);
+            text-transform: uppercase;
+        }
+        header .sub::before,
+        header .sub::after {
+            content: '';
+            display: inline-block;
+            width: 28px; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary-light));
+            margin: 0 12px;
+            vertical-align: middle;
+        }
+
+        /* ====== Status bar ====== */
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            margin: 8px auto 0;
+            width: fit-content;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(91, 141, 239, 0.25);
+            border-radius: 999px;
+            color: var(--primary-deep);
+            font-size: 13px;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.08);
+        }
+        .status-bar .dot {
+            width: 8px; height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+            animation: pulse 1.4s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2); }
+            50%      { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.05); }
+        }
+        .status-bar .progress {
+            color: var(--ink-soft);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ====== Canvas container ====== */
+        #container {
+            width: 100%;
+            height: 420px;
+            margin-top: 12px;
+            position: relative;
+        }
+        /* 背景浅网格 */
+        #container::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(91, 141, 239, 0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(91, 141, 239, 0.06) 1px, transparent 1px);
+            background-size: 32px 32px;
+            pointer-events: none;
+            mask-image: radial-gradient(ellipse at center, #000 40%, transparent 85%);
+            -webkit-mask-image: radial-gradient(ellipse at center, #000 40%, transparent 85%);
+        }
+
+        /* ====== Controls ====== */
+        .controls {
+            text-align: center;
+            padding: 12px 0 48px;
+        }
+        .btn {
+            padding: 12px 28px;
+            font-size: 14px;
+            letter-spacing: 3px;
+            color: #fff;
+            background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+        }
+        .btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 28px rgba(59, 130, 246, 0.4);
+        }
+        .btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+        .btn .arrow {
+            display: inline-block;
+            margin-right: 6px;
+            transform: translateY(-1px);
+        }
+
+        /* ====== Summary (appears after playback) ====== */
+        .summary {
+            max-width: 720px;
+            margin: 0 auto 48px;
+            padding: 20px 24px;
+            background: rgba(255, 255, 255, 0.75);
+            border: 1px solid rgba(91, 141, 239, 0.2);
+            border-radius: 12px;
+            color: var(--ink-soft);
+            font-size: 14px;
+            line-height: 1.8;
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.06);
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.5s, transform 0.5s;
+        }
+        .summary.show { opacity: 1; transform: translateY(0); }
+        .summary h3 {
+            color: var(--primary-deep);
+            font-size: 14px;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>思 维 链 推 导</h1>
+        <div class="sub">Chain&nbsp;of&nbsp;Thought&nbsp;·&nbsp;Reasoning&nbsp;Flow</div>
+    </header>
+
+    <div class="status-bar">
+        <span class="dot"></span>
+        <span id="statusText">准备开始推导...</span>
+        <span class="progress" id="progressText">0 / 0</span>
+    </div>
+
+    <div id="container"></div>
+
+    <div class="controls">
+        <button class="btn" id="replay" disabled>
+            <span class="arrow">▶</span>开&nbsp;始&nbsp;推&nbsp;导
+        </button>
+    </div>
+
+    <div class="summary" id="summary">
+        <h3>◆ 推导完成</h3>
+        <div>
+            推理过程共经过 <b id="sumSteps">—</b> 个步骤，从「理解问题」出发，
+            经过拆解、分析、整合，最终得出结论。
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@antv/g6@4.8.24/dist/g6.min.js"></script>
+    <script>
+        // ============ 思维链数据 ============
+        const CHAIN = [
+            { id: 'start',  label: '开始',       desc: 'Start',        kind: 'start'  },
+            { id: 'step-1', label: '理解问题',    desc: 'Understand',   kind: 'middle' },
+            { id: 'step-2', label: '拆解目标',    desc: 'Decompose',    kind: 'middle' },
+            { id: 'step-3', label: '收集信息',    desc: 'Gather',       kind: 'middle' },
+            { id: 'step-4', label: '推理分析',    desc: 'Reasoning',    kind: 'middle' },
+            { id: 'step-5', label: '整合方案',    desc: 'Synthesize',   kind: 'middle' },
+            { id: 'end',    label: '得出结论',    desc: 'Conclusion',   kind: 'end'    },
+        ];
+
+        const NODE_W = 148;
+        const NODE_H = 60;
+        const GAP = 62;
+
+        // ============ 自定义节点 ============
+        G6.registerNode('cot-node', {
+            draw(cfg, group) {
+                const isStart = cfg.kind === 'start';
+                const isEnd   = cfg.kind === 'end';
+                const w = NODE_W, h = NODE_H;
+                const r = 12;
+
+                // 柔光底（毛玻璃）
+                group.addShape('rect', {
+                    attrs: {
+                        x: -w/2 - 4, y: -h/2 - 4,
+                        width: w + 8, height: h + 8,
+                        radius: r + 4,
+                        fill: '#ffffff',
+                        opacity: 0.55,
+                        shadowColor: 'rgba(59, 130, 246, 0.22)',
+                        shadowBlur: 18,
+                        shadowOffsetY: 6,
+                    },
+                    name: 'glow',
+                });
+
+                // 卡片主体
+                const fill = isStart || isEnd ? '#3b82f6' : '#ffffff';
+                const stroke = isStart || isEnd ? '#1d4ed8' : '#9dc2ff';
+                const card = group.addShape('rect', {
+                    attrs: {
+                        x: -w/2, y: -h/2,
+                        width: w, height: h,
+                        radius: r,
+                        fill,
+                        stroke,
+                        lineWidth: 1.5,
+                    },
+                    name: 'card',
+                });
+
+                // 顶部高光描边
+                group.addShape('path', {
+                    attrs: {
+                        path: [
+                            ['M', -w/2 + r, -h/2],
+                            ['L',  w/2 - r, -h/2],
+                        ],
+                        stroke: isStart || isEnd ? 'rgba(255,255,255,0.55)' : 'rgba(59,130,246,0.45)',
+                        lineWidth: 1,
+                        lineCap: 'round',
+                    },
+                    name: 'top-highlightl',
+                });
+
+                // 左侧装饰竖条（科技感）
+                group.addShape('rect', {
+                    attrs: {
+                        x: -w/2 + 10, y: -h/2 + 12,
+                        width: 3, height: h - 24,
+                        radius: 1.5,
+                        fill: isStart || isEnd ? 'rgba(255,255,255,0.75)' : '#3b82f6',
+                    },
+                    name: 'accent',
+                });
+
+                // 主标题
+                group.addShape('text', {
+                    attrs: {
+                        text: cfg.label,
+                        x: 8, y: -6,
+                        fontSize: 15,
+                        fontWeight: 600,
+                        fill: isStart || isEnd ? '#ffffff' : '#0f172a',
+                        textAlign: 'center',
+                        textBaseline: 'middle',
+                        fontFamily: '"PingFang SC", "Microsoft YaHei", sans-serif',
+                    },
+                    name: 'title',
+                });
+
+                // 英文副标题
+                group.addShape('text', {
+                    attrs: {
+                        text: cfg.desc,
+                        x: 8, y: 14,
+                        fontSize: 11,
+                        fill: isStart || isEnd ? 'rgba(255,255,255,0.8)' : '#64748b',
+                        textAlign: 'center',
+                        textBaseline: 'middle',
+                        letterSpacing: 2,
+                    },
+                    name: 'desc',
+                });
+
+                // 四角 tech-corner
+                const cornerColor = isStart || isEnd ? 'rgba(255,255,255,0.85)' : '#3b82f6';
+                const corners = [
+                    [-w/2 + 4, -h/2 + 4, 1, 1],
+                    [ w/2 - 4, -h/2 + 4,-1, 1],
+                    [-w/2 + 4,  h/2 - 4, 1,-1],
+                    [ w/2 - 4,  h/2 - 4,-1,-1],
+                ];
+                corners.forEach(([cx, cy, sx, sy]) => {
+                    group.addShape('path', {
+                        attrs: {
+                            path: [
+                                ['M', cx + 6*sx, cy],
+                                ['L', cx, cy],
+                                ['L', cx, cy + 6*sy],
+                            ],
+                            stroke: cornerColor,
+                            lineWidth: 1.2,
+                            lineCap: 'round',
+                            opacity: 0.9,
+                        },
+                        name: `corner-${sx}-${sy}`,
+                    });
+                });
+
+                return card;
+            },
+            getAnchorPoints() {
+                return [[0, 0.5], [1, 0.5]];
+            },
+        });
+
+        // ============ 自定义"生长"边 ============
+        G6.registerEdge('grow-edge', {
+            draw(cfg, group) {
+                const { startPoint, endPoint } = cfg;
+                // 轻微弧度（水平居中微凸）
+                const midX = (startPoint.x + endPoint.x) / 2;
+                const path = [
+                    ['M', startPoint.x, startPoint.y],
+                    ['C', midX, startPoint.y, midX, endPoint.y, endPoint.x, endPoint.y],
+                ];
+
+                // 主线
+                const line = group.addShape('path', {
+                    attrs: {
+                        path,
+                        stroke: '#3b82f6',
+                        lineWidth: 2,
+                        lineCap: 'round',
+                        opacity: 0,       // 初始隐藏，play 时控制
+                    },
+                    name: 'line',
+                });
+
+                // 终点小圆（到达提示）
+                group.addShape('circle', {
+                    attrs: {
+                        x: endPoint.x, y: endPoint.y,
+                        r: 4,
+                        fill: '#3b82f6',
+                        stroke: '#ffffff',
+                        lineWidth: 2,
+                        opacity: 0,
+                        shadowColor: 'rgba(59, 130, 246, 0.5)',
+                        shadowBlur: 8,
+                    },
+                    name: 'dot',
+                });
+
+                // 沿线流动的能量点（播放时启用）
+                group.addShape('circle', {
+                    attrs: {
+                        x: startPoint.x, y: startPoint.y,
+                        r: 3,
+                        fill: '#60a5fa',
+                        opacity: 0,
+                        shadowColor: '#60a5fa',
+                        shadowBlur: 12,
+                    },
+                    name: 'spark',
+                });
+
+                return line;
+            },
+            getControlPoints(cfg) {
+                return [];
+            },
+        });
+
+        // ============ 构建数据 ============
+        const container = document.getElementById('container');
+        const cw = container.clientWidth;
+        const ch = container.clientHeight;
+
+        const totalW = CHAIN.length * NODE_W + (CHAIN.length - 1) * GAP;
+        const startX = (cw - totalW) / 2 + NODE_W / 2;
+        const centerY = ch / 2;
+
+        const data = {
+            nodes: CHAIN.map((n, i) => ({
+                ...n,
+                type: 'cot-node',
+                x: startX + i * (NODE_W + GAP),
+                y: centerY,
+            })),
+            edges: CHAIN.slice(0, -1).map((n, i) => ({
+                id: `e-${i}`,
+                source: n.id,
+                target: CHAIN[i + 1].id,
+                type: 'grow-edge',
+            })),
+        };
+
+        const graph = new G6.Graph({
+            container: 'container',
+            width: cw,
+            height: ch,
+            fitView: false,
+            animate: false,
+            defaultNode: { type: 'cot-node' },
+            defaultEdge: { type: 'grow-edge' },
+        });
+
+        graph.data(data);
+        graph.render();
+
+        // 缓存每个 shape 的初始 opacity，以便后续按比例缩放
+        function captureBaseOpacity(group) {
+            group.get('children').forEach(s => {
+                if (s.__baseOpacity === undefined) {
+                    const op = s.attr('opacity');
+                    s.__baseOpacity = (op === undefined || op === null) ? 1 : op;
+                }
+            });
+        }
+
+        function setGroupFade(group, ratio) {
+            group.get('children').forEach(s => {
+                s.attr('opacity', (s.__baseOpacity ?? 1) * ratio);
+            });
+        }
+
+        // 渲染后把所有节点/边子形状透明度置 0，等待逐步揭示
+        function resetAll() {
+            graph.getNodes().forEach(n => {
+                const g = n.getContainer();
+                captureBaseOpacity(g);
+                setGroupFade(g, 0);
+            });
+            graph.getEdges().forEach(e => {
+                const g = e.getContainer();
+                g.get('children').forEach(shape => shape.attr('opacity', 0));
+            });
+            graph.paint();
+        }
+
+        // ============ 动画工具 ============
+        function revealNode(node) {
+            return new Promise(resolve => {
+                const g = node.getContainer();
+                captureBaseOpacity(g);
+                const children = g.get('children');
+
+                // 记录每个 rect/text 的原始 y（path/circle 不偏移）
+                const originalYs = children.map(s => {
+                    const tp = s.get('type');
+                    if (tp === 'rect' || tp === 'text') return s.attr('y');
+                    return undefined;
+                });
+                children.forEach((s, i) => {
+                    if (originalYs[i] !== undefined) s.attr('y', originalYs[i] + 12);
+                });
+
+                const duration = 420;
+                const start = performance.now();
+                function tick(now) {
+                    const t = Math.min(1, (now - start) / duration);
+                    const ease = 1 - Math.pow(1 - t, 3); // easeOutCubic
+                    setGroupFade(g, ease);
+                    children.forEach((s, i) => {
+                        if (originalYs[i] !== undefined) {
+                            s.attr('y', originalYs[i] + 12 * (1 - ease));
+                        }
+                    });
+                    graph.paint();
+                    if (t < 1) requestAnimationFrame(tick);
+                    else resolve();
+                }
+                requestAnimationFrame(tick);
+            });
+        }
+
+        function growEdge(edge) {
+            return new Promise(resolve => {
+                const g = edge.getContainer();
+                const line = g.find(el => el.get('name') === 'line');
+                const dot  = g.find(el => el.get('name') === 'dot');
+                const spark = g.find(el => el.get('name') === 'spark');
+
+                const total = line.getTotalLength();
+                line.attr('lineDash', [total, total]);
+                line.attr('lineDashOffset', total);
+                line.attr('opacity', 1);
+
+                // spark 沿曲线移动
+                spark.attr('opacity', 1);
+
+                const duration = 720;
+                const start = performance.now();
+                function tick(now) {
+                    const t = Math.min(1, (now - start) / duration);
+                    const ease = t < 0.5
+                        ? 2 * t * t
+                        : 1 - Math.pow(-2 * t + 2, 2) / 2; // easeInOutQuad
+                    line.attr('lineDashOffset', total * (1 - ease));
+                    // spark 位置跟随进度
+                    const p = line.getPoint(ease);
+                    if (p) {
+                        spark.attr('x', p.x);
+                        spark.attr('y', p.y);
+                        spark.attr('r', 3 + Math.sin(t * Math.PI) * 2);
+                    }
+                    graph.paint();
+                    if (t < 1) requestAnimationFrame(tick);
+                    else {
+                        // 结束后淡出 spark，淡入终点 dot
+                        spark.attr('opacity', 0);
+                        const dotStart = performance.now();
+                        function dotTick(now2) {
+                            const dt = Math.min(1, (now2 - dotStart) / 250);
+                            dot.attr('opacity', dt);
+                            dot.attr('r', 3 + dt * 2);
+                            graph.paint();
+                            if (dt < 1) requestAnimationFrame(dotTick);
+                            else resolve();
+                        }
+                        requestAnimationFrame(dotTick);
+                    }
+                }
+                requestAnimationFrame(tick);
+            });
+        }
+
+        // ============ 播放 ============
+        const btn = document.getElementById('replay');
+        const statusText = document.getElementById('statusText');
+        const progressText = document.getElementById('progressText');
+        const summary = document.getElementById('summary');
+        let playing = false;
+
+        async function play() {
+            if (playing) return;
+            playing = true;
+            btn.disabled = true;
+            summary.classList.remove('show');
+
+            resetAll();
+            const nodes = graph.getNodes();
+            const edges = graph.getEdges();
+            const totalSteps = nodes.length;
+            progressText.textContent = `0 / ${totalSteps}`;
+
+            // 第 1 步：开始节点
+            statusText.textContent = '① 初始化起点';
+            progressText.textContent = `1 / ${totalSteps}`;
+            await revealNode(nodes[0]);
+            await sleep(320);
+
+            // 后续：边生长 -> 下一节点
+            for (let i = 0; i < edges.length; i++) {
+                const next = CHAIN[i + 1];
+                statusText.textContent = `推导中：${next.label}`;
+                await growEdge(edges[i]);
+                await sleep(120);
+                progressText.textContent = `${i + 2} / ${totalSteps}`;
+                await revealNode(nodes[i + 1]);
+                await sleep(260);
+            }
+
+            statusText.textContent = '✓ 推导完成';
+            document.getElementById('sumSteps').textContent = totalSteps;
+            summary.classList.add('show');
+            btn.disabled = false;
+            btn.querySelector('.arrow').textContent = '↻';
+            btn.lastChild.textContent = '重\u00a0新\u00a0播\u00a0放';
+            playing = false;
+        }
+
+        function sleep(ms) {
+            return new Promise(r => setTimeout(r, ms));
+        }
+
+        btn.addEventListener('click', play);
+
+        // 首次加载后等一下再自动开始
+        window.addEventListener('load', () => {
+            resetAll();
+            btn.disabled = false;
+            setTimeout(play, 500);
+        });
+
+        // ============ 自适应 ============
+        window.addEventListener('resize', () => {
+            const nw = container.clientWidth;
+            const nh = container.clientHeight;
+            const tw = CHAIN.length * NODE_W + (CHAIN.length - 1) * GAP;
+            const sx = (nw - tw) / 2 + NODE_W / 2;
+            const sy = nh / 2;
+            graph.changeSize(nw, nh);
+            CHAIN.forEach((n, i) => {
+                graph.updateItem(n.id, {
+                    x: sx + i * (NODE_W + GAP),
+                    y: sy,
+                });
+            });
+            graph.paint();
+        });
+    </script>
+</body>
+</html>

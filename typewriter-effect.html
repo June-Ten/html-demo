@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打字机效果 - 流式输出</title>
+    <!-- 引入 marked.js 用于 Markdown 解析 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .output-box {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 200px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        /* Markdown 样式 */
+        .output-box h1, .output-box h2, .output-box h3 {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .output-box h1 { font-size: 24px; color: #2c3e50; }
+        .output-box h2 { font-size: 20px; color: #34495e; }
+        .output-box h3 { font-size: 18px; color: #7f8c8d; }
+
+        .output-box p {
+            margin-bottom: 12px;
+        }
+
+        .output-box code {
+            background: #e8e8e8;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #e74c3c;
+            font-size: 14px;
+        }
+
+        .output-box pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .output-box pre code {
+            background: none;
+            color: #f8f8f2;
+            padding: 0;
+        }
+
+        .output-box ul, .output-box ol {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .output-box li {
+            margin-bottom: 6px;
+        }
+
+        .output-box blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+            margin: 15px 0;
+            color: #666;
+            font-style: italic;
+        }
+
+        .output-box strong {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .output-box em {
+            font-style: italic;
+        }
+
+        .output-box a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .output-box a:hover {
+            text-decoration: underline;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1em;
+            background-color: #333;
+            animation: blink 1s infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .speed-control {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .speed-control label {
+            display: block;
+            margin-bottom: 10px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖊️ 打字机效果演示</h1>
+        
+        <div class="output-box" id="output"></div>
+        
+        <div class="controls">
+            <button id="startBtn">开始输出</button>
+            <button id="pauseBtn" disabled>暂停</button>
+            <button id="resumeBtn" disabled>继续</button>
+            <button id="resetBtn">重置</button>
+        </div>
+
+        <div class="speed-control">
+            <label for="speedRange">输出速度: <span id="speedValue">50</span> ms/字符</label>
+            <input type="range" id="speedRange" min="10" max="200" value="50" step="10">
+        </div>
+    </div>
+
+    <script>
+        const texts = [
+            "# 欢迎来到打字机效果演示\n\n",
+            "这是一个**模拟流式输出**的示例，支持 Markdown 格式。\n\n",
+            "## 主要特性\n\n",
+            "- 支持 **粗体** 和 *斜体*\n",
+            "- 支持 `代码高亮`\n",
+            "- 支持列表和标题\n\n",
+            "### 代码示例\n\n",
+            "```javascript\nfunction hello() {\n  console.log('Hello World!');\n}\n```\n\n",
+            "> 这是一个引用块，常用于重要提示。\n\n",
+            "这种效果常用于 **AI 对话**、聊天机器人等场景。\n\n",
+            "希望你喜欢这个效果！✨"
+        ];
+
+        const output = document.getElementById('output');
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resumeBtn = document.getElementById('resumeBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const speedRange = document.getElementById('speedRange');
+        const speedValue = document.getElementById('speedValue');
+
+        let currentTextIndex = 0;
+        let currentCharIndex = 0;
+        let isPaused = false;
+        let isRunning = false;
+        let speed = 50;
+        let timeoutId = null;
+        let accumulatedText = ''; // 累积的原始文本
+
+        // 获取随机延迟，模拟真实AI输出
+        function getRandomDelay() {
+            const baseSpeed = speed;
+            // 80%的时间快速输出
+            if (Math.random() < 0.8) {
+                return baseSpeed + Math.random() * 20; // 快速：baseSpeed ~ baseSpeed+20
+            }
+            // 15%的时间中等速度
+            else if (Math.random() < 0.95) {
+                return baseSpeed + Math.random() * 100; // 中速：baseSpeed ~ baseSpeed+100
+            }
+            // 5%的时间较慢（模拟思考或网络延迟）
+            else {
+                return baseSpeed + Math.random() * 300; // 慢速：baseSpeed ~ baseSpeed+300
+            }
+        }
+
+        // 更新速度显示
+        speedRange.addEventListener('input', (e) => {
+            speed = parseInt(e.target.value);
+            speedValue.textContent = speed;
+        });
+
+        // 打字机效果函数
+        function typeWriter() {
+            if (isPaused || !isRunning) return;
+
+            if (currentTextIndex < texts.length) {
+                const currentText = texts[currentTextIndex];
+                
+                if (currentCharIndex < currentText.length) {
+                    const char = currentText[currentCharIndex];
+                    
+                    // 累积文本
+                    accumulatedText += char;
+                    
+                    // 渲染 Markdown
+                    renderMarkdown();
+                    
+                    currentCharIndex++;
+                    timeoutId = setTimeout(typeWriter, getRandomDelay());
+                } else {
+                    // 当前文本输出完成，移动到下一个
+                    currentTextIndex++;
+                    currentCharIndex = 0;
+                    timeoutId = setTimeout(typeWriter, getRandomDelay());
+                }
+            } else {
+                // 所有文本输出完成
+                finishTyping();
+            }
+        }
+
+        // 渲染 Markdown 内容
+        function renderMarkdown() {
+            // 移除旧光标
+            const oldCursor = output.querySelector('.cursor');
+            if (oldCursor) oldCursor.remove();
+            
+            // 使用 marked 解析 Markdown
+            output.innerHTML = marked.parse(accumulatedText);
+            
+            // 添加新光标
+            const cursor = document.createElement('span');
+            cursor.className = 'cursor';
+            output.appendChild(cursor);
+        }
+
+        // 开始输出
+        startBtn.addEventListener('click', () => {
+            if (isRunning) return;
+            
+            isRunning = true;
+            isPaused = false;
+            startBtn.disabled = true;
+            pauseBtn.disabled = false;
+            resumeBtn.disabled = true;
+            
+            typeWriter();
+        });
+
+        // 暂停
+        pauseBtn.addEventListener('click', () => {
+            isPaused = true;
+            pauseBtn.disabled = true;
+            resumeBtn.disabled = false;
+            
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+        });
+
+        // 继续
+        resumeBtn.addEventListener('click', () => {
+            isPaused = false;
+            pauseBtn.disabled = false;
+            resumeBtn.disabled = true;
+            
+            typeWriter();
+        });
+
+        // 重置
+        resetBtn.addEventListener('click', () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+            
+            output.innerHTML = '';
+            accumulatedText = '';
+            currentTextIndex = 0;
+            currentCharIndex = 0;
+            isPaused = false;
+            isRunning = false;
+            
+            startBtn.disabled = false;
+            pauseBtn.disabled = true;
+            resumeBtn.disabled = true;
+        });
+
+        // 完成输出
+        function finishTyping() {
+            isRunning = false;
+            startBtn.disabled = false;
+            pauseBtn.disabled = true;
+            resumeBtn.disabled = true;
+            
+            // 移除光标
+            const cursor = output.querySelector('.cursor');
+            if (cursor) cursor.remove();
+        }
+    </script>
+</body>
+</html>

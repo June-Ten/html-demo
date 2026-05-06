@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <script>
+      // DO NOT REMOVE THIS SCRIPT
+      // 运行时动态计算 basename
+      (function() {
+        var pathname = window.location.pathname;
+        pathname = pathname.replace(/\/index\.html?$/, '');
+        var basename = pathname || '/';
+        if (basename !== '/' && basename.endsWith('/')) {
+          basename = basename.slice(0, -1);
+        }
+        window.__APP_BASENAME__ = basename;
+
+        // 设置 <base> 标签，让所有相对路径资源正确解析
+        var base = document.createElement('base');
+        // 如果 basename 是 '/'，直接设置为 '/'，否则添加 '/'
+        base.href = basename === '/' ? '/' : basename + '/';
+        document.head.appendChild(base);
+      })();
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Botanical Organic - 自然有机设计</title>
+    <meta name="description" content="体验自然与设计的完美融合，感受有机美学的温暖触感">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- AOS Animation -->
+    <link href="https://lf3-static.bytednsdoc.com/obj/eden-cn/LMfspH/ljhwZthlaukjlkulzlp/webpage/aos@2.3.1.css" rel="stylesheet">
+    <script src="https://lf3-static.bytednsdoc.com/obj/eden-cn/LMfspH/ljhwZthlaukjlkulzlp/webpage/aos@2.3.1.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
+    <style>
+        :root {
+            --bg-primary: #F9F8F4;
+            --text-primary: #2D3A31;
+            --accent-primary: #8C9A84;
+            --accent-secondary: #DCCFC2;
+            --border-light: #E6E2DA;
+            --interactive: #C27B66;
+        }
+        
+        body {
+            font-family: 'Source Sans 3', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .font-display {
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .font-display-italic {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+        }
+        
+        /* Paper grain texture */
+        .paper-texture {
+            pointer-events: none;
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            opacity: 0.015;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+        }
+        
+        /* Arch shape for images */
+        .arch-shape {
+            clip-path: ellipse(50% 70% at 50% 30%);
+            border-radius: 50% 50% 0 0;
+        }
+        
+        /* Organic blob shape */
+        .blob-shape {
+            border-radius: 60% 40% 30% 70%/60% 30% 70% 40%;
+        }
+        
+        /* Custom animations */
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .animate-sway {
+            animation: sway 8s ease-in-out infinite;
+        }
+        
+        @keyframes sway {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
+        }
+        
+        /* Smooth scroll */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-primary);
+        }
+    </style>
+  <script type="module" crossorigin>(function(){const o=document.createElement("link").relList;if(o&&o.supports&&o.supports("modulepreload"))return;for(const t of document.querySelectorAll('link[rel="modulepreload"]'))c(t);new MutationObserver(t=>{for(const r of t)if(r.type==="childList")for(const i of r.addedNodes)i.tagName==="LINK"&&i.rel==="modulepreload"&&c(i)}).observe(document,{childList:!0,subtree:!0});function n(t){const r={};return t.integrity&&(r.integrity=t.integrity),t.referrerPolicy&&(r.referrerPolicy=t.referrerPolicy),t.crossOrigin==="use-credentials"?r.credentials="include":t.crossOrigin==="anonymous"?r.credentials="omit":r.credentials="same-origin",r}function c(t){if(t.ep)return;t.ep=!0;const r=n(t);fetch(t.href,r)}})();lucide.createIcons();AOS.init({duration:800,once:!0,offset:100});const d=document.getElementById("mobile-menu-btn"),s=document.getElementById("mobile-menu"),u=document.getElementById("mobile-menu-close"),a=document.querySelectorAll(".mobile-link");function f(){s.classList.remove("hidden"),document.body.style.overflow="hidden"}function l(){s.classList.add("hidden"),document.body.style.overflow=""}d.addEventListener("click",f);u.addEventListener("click",l);a.forEach(e=>{e.addEventListener("click",l)});s.addEventListener("click",e=>{e.target===s&&l()});const m=document.querySelectorAll(".faq-toggle");m.forEach(e=>{e.addEventListener("click",()=>{const o=e.nextElementSibling,n=e.querySelector(".faq-icon");o.style.maxHeight&&o.style.maxHeight!=="0px"?(o.style.maxHeight="0px",n.style.transform="rotate(0deg)"):(document.querySelectorAll(".faq-content").forEach(c=>{c.style.maxHeight="0px"}),document.querySelectorAll(".faq-icon").forEach(c=>{c.style.transform="rotate(0deg)"}),o.style.maxHeight=o.scrollHeight+"px",n.style.transform="rotate(180deg)")})});document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(o){o.preventDefault();const n=document.querySelector(this.getAttribute("href"));n&&n.scrollIntoView({behavior:"smooth",block:"start"})})});window.addEventListener("scroll",()=>{const e=document.querySelector("nav");window.scrollY>50?(e.classList.add("bg-[#F9F8F4]/95"),e.classList.remove("bg-[#F9F8F4]/80")):(e.classList.add("bg-[#F9F8F4]/80"),e.classList.remove("bg-[#F9F8F4]/95"))});const y=new MutationObserver(()=>{lucide.createIcons()});y.observe(document.body,{childList:!0,subtree:!0});
+</script>
+</head>
+<body>
+    <!-- Paper grain texture overlay -->
+    <div class="paper-texture"></div>
+    
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full bg-[#F9F8F4]/80 backdrop-blur-sm z-40 border-b border-[#E6E2DA]/50">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <!-- Logo -->
+                <div class="font-display text-2xl font-semibold text-[#2D3A31]">
+                    <span class="font-display-italic">Botanical</span>
+                </div>
+                
+                <!-- Desktop Navigation -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#home" class="text-[#2D3A31] hover:text-[#8C9A84] transition-colors duration-300">首页</a>
+                    <a href="#features" class="text-[#2D3A31] hover:text-[#8C9A84] transition-colors duration-300">特色</a>
+                    <a href="#services" class="text-[#2D3A31] hover:text-[#8C9A84] transition-colors duration-300">服务</a>
+                    <a href="#faq" class="text-[#2D3A31] hover:text-[#8C9A84] transition-colors duration-300">常见问题</a>
+                    <button class="bg-[#2D3A31] text-white px-6 py-2 rounded-full hover:bg-opacity-90 transition-all duration-300 tracking-widest text-sm">
+                        联系我们
+                    </button>
+                </div>
+                
+                <!-- Mobile Menu Button -->
+                <button id="mobile-menu-btn" class="md:hidden p-2">
+                    <i data-lucide="menu" class="w-6 h-6 text-[#2D3A31]"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden fixed inset-0 bg-[#F9F8F4] z-50">
+            <div class="flex flex-col items-center justify-center h-full space-y-8">
+                <button id="mobile-menu-close" class="absolute top-6 right-6 p-2">
+                    <i data-lucide="x" class="w-8 h-8 text-[#2D3A31]"></i>
+                </button>
+                <a href="#home" class="text-2xl text-[#2D3A31] hover:text-[#8C9A84] transition-colors duration-300 mobile-link">首页</a>
+                <a href="#features" class="text-2xl text-[#2D3A31] hover:text-[#8C9A84] transition-colors duration-300 mobile-link">特色</a>
+                <a href="#services" class="text-2xl text-[#2D3A31] hover:text-[#8C9A84] transition-colors duration-300 mobile-link">服务</a>
+                <a href="#faq" class="text-2xl text-[#2D3A31] hover:text-[#8C9A84] transition-colors duration-300 mobile-link">常见问题</a>
+                <button class="bg-[#2D3A31] text-white px-8 py-3 rounded-full hover:bg-opacity-90 transition-all duration-300 tracking-widest text-lg">
+                    联系我们
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Hero Section -->
+    <section id="home" class="min-h-screen flex items-center pt-20 pb-16">
+        <div class="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
+            <!-- Hero Content -->
+            <div class="space-y-8" data-aos="fade-up" data-aos-duration="700">
+                <div class="space-y-6">
+                    <h1 class="font-display text-5xl md:text-7xl lg:text-8xl font-bold text-[#2D3A31] leading-tight">
+                        自然 <span class="font-display-italic text-[#8C9A84]">美学</span><br>
+                        <span class="font-display-italic">有机</span> 设计
+                    </h1>
+                    <p class="text-lg md:text-xl text-[#2D3A31]/80 leading-relaxed max-w-lg">
+                        体验自然与设计的完美融合，感受有机美学的温暖触感。每一个元素都经过精心雕琢，如同大自然本身的艺术品。
+                    </p>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <button class="bg-[#2D3A31] text-white px-8 py-4 rounded-full hover:bg-opacity-90 transition-all duration-300 tracking-widest text-sm font-medium">
+                        探索更多
+                    </button>
+                    <button class="border-2 border-[#8C9A84] text-[#8C9A84] px-8 py-4 rounded-full hover:bg-[#8C9A84] hover:text-white transition-all duration-300 tracking-widest text-sm font-medium">
+                        查看作品
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Hero Image -->
+            <div class="relative" data-aos="fade-left" data-aos-duration="700" data-aos-delay="200">
+                <div class="relative">
+                    <!-- Main arch image -->
+                    <div class="arch-shape bg-gradient-to-br from-[#8C9A84]/20 to-[#DCCFC2]/30 aspect-[3/4] md:aspect-square relative overflow-hidden">
+                        <img src="./assets/hero-arch-C6ULTT77.jpeg" alt="自然有机拱形装饰" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#F9F8F4]/30 to-transparent"></div>
+                    </div>
+                    
+                    <!-- Floating decorative elements -->
+                    <div class="absolute -top-8 -right-8 w-24 h-24 bg-[#8C9A84]/10 rounded-full animate-float"></div>
+                    <div class="absolute -bottom-6 -left-6 w-16 h-16 bg-[#DCCFC2]/20 blob-shape animate-sway"></div>
+                    
+                    <!-- Quote card -->
+                    <div class="absolute bottom-8 right-8 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-[#E6E2DA]/50">
+                        <p class="font-display-italic text-[#2D3A31] text-lg leading-relaxed">
+                            "设计应该如同<br>大自然般呼吸"
+                        </p>
+                        <p class="text-sm text-[#2D3A31]/60 mt-2">— 我们的理念</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Features Section -->
+    <section id="features" class="py-32 bg-white">
+        <div class="max-w-7xl mx-auto px-6">
+            <!-- Section Header -->
+            <div class="text-center mb-20" data-aos="fade-up" data-aos-duration="500">
+                <h2 class="font-display text-4xl md:text-6xl font-bold text-[#2D3A31] mb-6">
+                    <span class="font-display-italic text-[#8C9A84]">核心</span> 特色
+                </h2>
+                <p class="text-lg text-[#2D3A31]/70 max-w-2xl mx-auto leading-relaxed">
+                    每一个细节都体现着我们对自然美学的追求，让设计回归本真，回归温暖
+                </p>
+            </div>
+            
+            <!-- Feature Cards -->
+            <div class="grid md:grid-cols-3 gap-8 md:gap-12">
+                <!-- Feature 1 -->
+                <div class="group" data-aos="fade-up" data-aos-duration="500" data-aos-delay="100">
+                    <div class="bg-[#F9F8F4] rounded-3xl p-8 hover:-translate-y-2 transition-all duration-500 shadow-sm hover:shadow-lg border border-[#E6E2DA]/50">
+                        <div class="w-16 h-16 bg-[#8C9A84]/10 rounded-2xl flex items-center justify-center mb-6">
+                            <i data-lucide="leaf" class="w-8 h-8 text-[#8C9A84] stroke-[1.5]"></i>
+                        </div>
+                        <h3 class="font-display text-2xl font-semibold text-[#2D3A31] mb-4">
+                            自然 <span class="font-display-italic">灵感</span>
+                        </h3>
+                        <p class="text-[#2D3A31]/70 leading-relaxed mb-6">
+                            从大自然中汲取设计灵感，每一片叶子、每一道纹理都承载着生命的韵律与美感。
+                        </p>
+                        <div class="aspect-[4/3] rounded-2xl overflow-hidden mb-6">
+                            <img src="./assets/feature-1-B64y6LTj.jpeg" alt="自然灵感" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+                        </div>
+                        <a href="#" class="text-[#8C9A84] hover:text-[#2D3A31] transition-colors duration-300 font-medium flex items-center gap-2 group-hover:gap-3">
+                            了解更多
+                            <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Feature 2 (Staggered) -->
+                <div class="group md:translate-y-12" data-aos="fade-up" data-aos-duration="500" data-aos-delay="200">
+                    <div class="bg-white rounded-3xl p-8 hover:-translate-y-2 transition-all duration-500 shadow-sm hover:shadow-lg border border-[#E6E2DA]/50">
+                        <div class="w-16 h-16 bg-[#DCCFC2]/20 rounded-2xl flex items-center justify-center mb-6">
+                            <i data-lucide="sparkles" class="w-8 h-8 text-[#C27B66] stroke-[1.5]"></i>
+                        </div>
+                        <h3 class="font-display text-2xl font-semibold text-[#2D3A31] mb-4">
+                            手工 <span class="font-display-italic">匠心</span>
+                        </h3>
+                        <p class="text-[#2D3A31]/70 leading-relaxed mb-6">
+                            每一件作品都经过精心雕琢，如同陶艺师手中的器皿，承载着温度与情感。
+                        </p>
+                        <div class="aspect-[4/3] rounded-2xl overflow-hidden mb-6">
+                            <img src="./assets/feature-2-B6qHnzw2.jpeg" alt="手工匠心" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+                        </div>
+                        <a href="#" class="text-[#8C9A84] hover:text-[#2D3A31] transition-colors duration-300 font-medium flex items-center gap-2 group-hover:gap-3">
+                            探索工艺
+                            <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Feature 3 -->
+                <div class="group" data-aos="fade-up" data-aos-duration="500" data-aos-delay="300">
+                    <div class="bg-[#F9F8F4] rounded-3xl p-8 hover:-translate-y-2 transition-all duration-500 shadow-sm hover:shadow-lg border border-[#E6E2DA]/50">
+                        <div class="w-16 h-16 bg-[#8C9A84]/10 rounded-2xl flex items-center justify-center mb-6">
+                            <i data-lucide="heart" class="w-8 h-8 text-[#8C9A84] stroke-[1.5]"></i>
+                        </div>
+                        <h3 class="font-display text-2xl font-semibold text-[#2D3A31] mb-4">
+                            温暖 <span class="font-display-italic">触感</span>
+                        </h3>
+                        <p class="text-[#2D3A31]/70 leading-relaxed mb-6">
+                            不仅是视觉的享受，更是触觉的体验。每一寸材质都诉说着自然的故事。
+                        </p>
+                        <div class="aspect-[4/3] rounded-2xl overflow-hidden mb-6">
+                            <img src="./assets/feature-3-DnvAH56d.jpeg" alt="温暖触感" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+                        </div>
+                        <a href="#" class="text-[#8C9A84] hover:text-[#2D3A31] transition-colors duration-300 font-medium flex items-center gap-2 group-hover:gap-3">
+                            感受温度
+                            <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Stats Section -->
+    <section class="py-24 bg-[#F9F8F4]">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-16">
+                <div class="text-center" data-aos="fade-up" data-aos-duration="500">
+                    <div class="font-display text-4xl md:text-6xl font-bold text-[#8C9A84] mb-2">500+</div>
+                    <div class="text-[#2D3A31]/70 font-medium">满意客户</div>
+                </div>
+                <div class="text-center" data-aos="fade-up" data-aos-duration="500" data-aos-delay="100">
+                    <div class="font-display text-4xl md:text-6xl font-bold text-[#C27B66] mb-2">8年</div>
+                    <div class="text-[#2D3A31]/70 font-medium">设计经验</div>
+                </div>
+                <div class="text-center" data-aos="fade-up" data-aos-duration="500" data-aos-delay="200">
+                    <div class="font-display text-4xl md:text-6xl font-bold text-[#8C9A84] mb-2">1200+</div>
+                    <div class="text-[#2D3A31]/70 font-medium">完成项目</div>
+                </div>
+                <div class="text-center" data-aos="fade-up" data-aos-duration="500" data-aos-delay="300">
+                    <div class="font-display text-4xl md:text-6xl font-bold text-[#C27B66] mb-2">24/7</div>
+                    <div class="text-[#2D3A31]/70 font-medium">贴心服务</div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Services Section -->
+    <section id="services" class="py-32 bg-white">
+        <div class="max-w-7xl mx-auto px-6">
+            <!-- Section Header -->
+            <div class="text-center mb-20" data-aos="fade-up" data-aos-duration="500">
+                <h2 class="font-display text-4xl md:text-6xl font-bold text-[#2D3A31] mb-6">
+                    <span class="font-display-italic text-[#8C9A84]">专业</span> 服务
+                </h2>
+                <p class="text-lg text-[#2D3A31]/70 max-w-2xl mx-auto leading-relaxed">
+                    从概念到实现，我们为您的每一个创意需求提供全方位的专业支持
+                </p>
+            </div>
+            
+            <!-- Service Items -->
+            <div class="space-y-24">
+                <!-- Service 1 -->
+                <div class="grid lg:grid-cols-2 gap-16 items-center" data-aos="fade-up" data-aos-duration="500">
+                    <div class="space-y-6">
+                        <div class="w-20 h-20 bg-[#8C9A84]/10 rounded-3xl flex items-center justify-center">
+                            <i data-lucide="palette" class="w-10 h-10 text-[#8C9A84] stroke-[1.5]"></i>
+                        </div>
+                        <h3 class="font-display text-3xl md:text-4xl font-bold text-[#2D3A31]">
+                            品牌 <span class="font-display-italic text-[#8C9A84]">视觉设计</span>
+                        </h3>
+                        <p class="text-lg text-[#2D3A31]/70 leading-relaxed">
+                            从品牌标识到完整的视觉识别系统，我们帮助您建立独特而有温度的品牌形象。每一个色彩、每一个字体选择都承载着您的品牌故事。
+                        </p>
+                        <ul class="space-y-3">
+                            <li class="flex items-center gap-3 text-[#2D3A31]/80">
+                                <i data-lucide="check" class="w-5 h-5 text-[#8C9A84] stroke-[2]"></i>
+                                品牌标识设计
+                            </li>
+                            <li class="flex items-center gap-3 text-[#2D3A31]/80">
+                                <i data-lucide="check" class="w-5 h-5 text-[#8C9A84] stroke-[2]"></i>
+                                视觉识别系统
+                            </li>
+                            <li class="flex items-center gap-3 text-[#2D3A31]/80">
+                                <i data-lucide="check" class="w-5 h-5 text-[#8C9A84] stroke-[2]"></i>
+                                品牌应用设计
+                            </li>
+                        </ul>
+                        <button class="bg-[#2D3A31] text-white px-6 py-3 rounded-full hover:bg-opacity-90 transition-all duration-300 tracking-widest text-sm">
+                            了解更多
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <div class="aspect-[4/5] rounded-[40px] overflow-hidden shadow-xl">
+                            <img src="./assets/service-1-BYfaa7h1.jpeg" alt="品牌视觉设计" class="w-full h-full object-cover">
+                        </div>
+                        <div class="absolute -bottom-6 -right-6 w-32 h-32 bg-[#DCCFC2]/20 rounded-[40px] animate-sway"></div>
+                    </div>
+                </div>
+                
+                <!-- Service 2 (Reverse) -->
+                <div class="grid lg:grid-cols-2 gap-16 items-center" data-aos="fade-up" data-aos-duration="500">
+                    <div class="lg:order-2 space-y-6">
+                        <div class="w-20 h-20 bg-[#C27B66]/10 rounded-3xl flex items-center justify-center">
+                            <i data-lucide="home" class="w-10 h-10 text-[#C27B66] stroke-[1.5]"></i>
+                        </div>
+                        <h3 class="font-display text-3xl md:text-4xl font-bold text-[#2D3A31]">
+                            空间 <span class="font-display-italic text-[#8C9A84]">设计规划</span>
+                        </h3>
+                        <p class="text-lg text-[#2D3A31]/70 leading-relaxed">
+                            将有机美学融入空间设计，创造既现代又温暖的居住和工作环境。我们相信好的空间设计能够滋养人的心灵。
+                        </p>
+                        <ul class="space-y-3">
+                            <li class="flex items-center gap-3 text-[#2D3A31]/80">
+                                <i data-lucide="check" class="w-5 h-5 text-[#8C9A84] stroke-[2]"></i>
+                                住宅空间设计
+                            </li>
+                            <li class="flex items-center gap-3 text-[#2D3A31]/80">
+                                <i data-lucide="check" class="w-5 h-5 text-[#8C9A84] stroke-[2]"></i>
+                                商业空间规划
+                            </li>
+                            <li class="flex items-center gap-3 text-[#2D3A31]/80">
+                                <i data-lucide="check" class="w-5 h-5 text-[#8C9A84] stroke-[2]"></i>
+                                软装搭配建议
+                            </li>
+                        </ul>
+                        <button class="bg-[#2D3A31] text-white px-6 py-3 rounded-full hover:bg-opacity-90 transition-all duration-300 tracking-widest text-sm">
+                            探索方案
+                        </button>
+                    </div>
+                    <div class="lg:order-1 relative">
+                        <div class="aspect-[4/5] rounded-[40px] overflow-hidden shadow-xl">
+                            <img src="./assets/service-2-CrGuBD1Y.jpeg" alt="空间设计规划" class="w-full h-full object-cover">
+                        </div>
+                        <div class="absolute -top-6 -left-6 w-28 h-28 bg-[#8C9A84]/10 rounded-full animate-float"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- FAQ Section -->
+    <section id="faq" class="py-32 bg-[#F9F8F4]">
+        <div class="max-w-4xl mx-auto px-6">
+            <!-- Section Header -->
+            <div class="text-center mb-20" data-aos="fade-up" data-aos-duration="500">
+                <h2 class="font-display text-4xl md:text-6xl font-bold text-[#2D3A31] mb-6">
+                    <span class="font-display-italic text-[#8C9A84]">常见</span> 问题
+                </h2>
+                <p class="text-lg text-[#2D3A31]/70 max-w-2xl mx-auto leading-relaxed">
+                    我们收集了客户最常关心的问题，希望能为您提供清晰的解答
+                </p>
+            </div>
+            
+            <!-- FAQ Items -->
+            <div class="space-y-6" data-aos="fade-up" data-aos-duration="500" data-aos-delay="200">
+                <div class="bg-white rounded-3xl border border-[#E6E2DA]/50 overflow-hidden">
+                    <button class="faq-toggle w-full p-8 text-left flex justify-between items-center hover:bg-[#F9F8F4]/50 transition-colors duration-300">
+                        <div>
+                            <h3 class="font-display text-xl font-semibold text-[#2D3A31]">
+                                设计周期通常需要多长时间？
+                            </h3>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-6 h-6 text-[#8C9A84] transition-transform duration-300 faq-icon"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-500 ease-out">
+                        <div class="px-8 pb-8">
+                            <p class="text-[#2D3A31]/70 leading-relaxed">
+                                设计周期根据项目的复杂程度而有所不同。一般来说，品牌标识设计需要2-3周，完整的视觉识别系统需要4-6周，空间设计项目则需要6-12周。我们会在项目开始前与您详细沟通，制定合理的时间计划。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-3xl border border-[#E6E2DA]/50 overflow-hidden">
+                    <button class="faq-toggle w-full p-8 text-left flex justify-between items-center hover:bg-[#F9F8F4]/50 transition-colors duration-300">
+                        <div>
+                            <h3 class="font-display text-xl font-semibold text-[#2D3A31]">
+                                如何确保设计符合我们的品牌理念？
+                            </h3>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-6 h-6 text-[#8C9A84] transition-transform duration-300 faq-icon"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-500 ease-out">
+                        <div class="px-8 pb-8">
+                            <p class="text-[#2D3A31]/70 leading-relaxed">
+                                我们在项目开始前会进行深入的品牌调研和沟通，了解您的品牌故事、目标受众和市场定位。设计过程中会有多个阶段的反馈和修改，确保最终的设计作品完美诠释您的品牌理念。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-3xl border border-[#E6E2DA]/50 overflow-hidden">
+                    <button class="faq-toggle w-full p-8 text-left flex justify-between items-center hover:bg-[#F9F8F4]/50 transition-colors duration-300">
+                        <div>
+                            <h3 class="font-display text-xl font-semibold text-[#2D3A31]">
+                                是否提供售后服务和修改？
+                            </h3>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-6 h-6 text-[#8C9A84] transition-transform duration-300 faq-icon"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-500 ease-out">
+                        <div class="px-8 pb-8">
+                            <p class="text-[#2D3A31]/70 leading-relaxed">
+                                当然！我们提供完善的售后服务。项目交付后，我们会为您提供一定期限内的免费小修改服务。同时，我们也提供长期的设计支持和咨询服务，确保您的品牌视觉始终保持最佳状态。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-3xl border border-[#E6E2DA]/50 overflow-hidden">
+                    <button class="faq-toggle w-full p-8 text-left flex justify-between items-center hover:bg-[#F9F8F4]/50 transition-colors duration-300">
+                        <div>
+                            <h3 class="font-display text-xl font-semibold text-[#2D3A31]">
+                                收费标准是怎样的？
+                            </h3>
+                        </div>
+                        <i data-lucide="chevron-down" class="w-6 h-6 text-[#8C9A84] transition-transform duration-300 faq-icon"></i>
+                    </button>
+                    <div class="faq-content max-h-0 overflow-hidden transition-all duration-500 ease-out">
+                        <div class="px-8 pb-8">
+                            <p class="text-[#2D3A31]/70 leading-relaxed">
+                                我们的收费根据项目的具体需求和工作量来确定。我们提供透明的报价体系，会在项目开始前为您提供详细的报价单。我们也提供分阶段付款的方式，让您的投资更加灵活和安心。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer class="bg-[#2D3A31] text-white py-20">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
+                <!-- Brand -->
+                <div class="space-y-6">
+                    <div class="font-display text-2xl font-semibold">
+                        <span class="font-display-italic">Botanical</span>
+                    </div>
+                    <p class="text-white/70 leading-relaxed">
+                        专注于自然有机设计，为您的品牌注入温暖与活力。让设计回归本真，回归自然。
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors duration-300">
+                            <i data-lucide="instagram" class="w-5 h-5"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors duration-300">
+                            <i data-lucide="twitter" class="w-5 h-5"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors duration-300">
+                            <i data-lucide="facebook" class="w-5 h-5"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Services -->
+                <div class="space-y-4">
+                    <h4 class="font-display text-lg font-semibold mb-4">服务项目</h4>
+                    <ul class="space-y-3 text-white/70">
+                        <li><a href="#" class="hover:text-white transition-colors duration-300">品牌视觉设计</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors duration-300">空间设计规划</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors duration-300">包装设计</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors duration-300">网站设计</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Company -->
+                <div class="space-y-4">
+                    <h4 class="font-display text-lg font-semibold mb-4">公司信息</h4>
+                    <ul class="space-y-3 text-white/70">
+                        <li><a href="#" class="hover:text-white transition-colors duration-300">关于我们</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors duration-300">团队介绍</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors duration-300">客户案例</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors duration-300">新闻动态</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Contact -->
+                <div class="space-y-4">
+                    <h4 class="font-display text-lg font-semibold mb-4">联系我们</h4>
+                    <div class="space-y-3 text-white/70">
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="map-pin" class="w-5 h-5 mt-1 flex-shrink-0"></i>
+                            <span>杭州市西湖区文三路<br>创意设计中心</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="phone" class="w-5 h-5 flex-shrink-0"></i>
+                            <span>+86 138 0000 0000</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="mail" class="w-5 h-5 flex-shrink-0"></i>
+                            <span>hello@botanical.design</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bottom -->
+            <div class="border-t border-white/20 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-white/60 text-sm">
+                    © 2024 Botanical Design. 保留所有权利.
+                </p>
+                <div class="flex space-x-6 mt-4 md:mt-0">
+                    <a href="#" class="text-white/60 hover:text-white text-sm transition-colors duration-300">隐私政策</a>
+                    <a href="#" class="text-white/60 hover:text-white text-sm transition-colors duration-300">服务条款</a>
+                    <a href="#" class="text-white/60 hover:text-white text-sm transition-colors duration-300">Cookie政策</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+</body>
+</html>

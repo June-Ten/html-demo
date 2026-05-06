@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>中国 3D 地图 · Three.js 科技风</title>
+    <style>
+        :root {
+            --cyan: #00e5ff;
+            --cyan-soft: #4ff5ff;
+            --blue-deep: #061428;
+            --blue-mid: #0c2a4a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: radial-gradient(ellipse at center, #0a1e38 0%, #030810 70%, #000 100%);
+            color: #cfefff;
+            font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+
+        #app { position: fixed; inset: 0; }
+
+        /* HUD 顶部标题 */
+        .hud-top {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .hud-top .title {
+            font-size: 28px;
+            letter-spacing: 8px;
+            font-weight: 600;
+            background: linear-gradient(90deg, #4ff5ff, #00e5ff, #ffffff, #00e5ff, #4ff5ff);
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: shine 4s linear infinite;
+            text-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+        }
+        .hud-top .subtitle {
+            margin-top: 6px;
+            font-size: 12px;
+            letter-spacing: 4px;
+            color: rgba(180, 230, 255, 0.55);
+        }
+        @keyframes shine {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* 四角装饰 */
+        .corner {
+            position: fixed;
+            width: 120px; height: 120px;
+            border: 1px solid rgba(0, 229, 255, 0.35);
+            z-index: 5;
+            pointer-events: none;
+        }
+        .corner.tl { top: 16px; left: 16px; border-right: none; border-bottom: none; }
+        .corner.tr { top: 16px; right: 16px; border-left: none; border-bottom: none; }
+        .corner.bl { bottom: 16px; left: 16px; border-right: none; border-top: none; }
+        .corner.br { bottom: 16px; right: 16px; border-left: none; border-top: none; }
+        .corner::before, .corner::after {
+            content: '';
+            position: absolute;
+            background: var(--cyan);
+            box-shadow: 0 0 8px var(--cyan);
+        }
+        .corner.tl::before { top: -1px; left: -1px; width: 24px; height: 3px; }
+        .corner.tl::after  { top: -1px; left: -1px; width: 3px;  height: 24px; }
+        .corner.tr::before { top: -1px; right: -1px; width: 24px; height: 3px; }
+        .corner.tr::after  { top: -1px; right: -1px; width: 3px;  height: 24px; }
+        .corner.bl::before { bottom: -1px; left: -1px; width: 24px; height: 3px; }
+        .corner.bl::after  { bottom: -1px; left: -1px; width: 3px;  height: 24px; }
+        .corner.br::before { bottom: -1px; right: -1px; width: 24px; height: 3px; }
+        .corner.br::after  { bottom: -1px; right: -1px; width: 3px;  height: 24px; }
+
+        /* 左侧信息面板 */
+        .panel {
+            position: fixed;
+            left: 32px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 240px;
+            padding: 16px 18px;
+            background: linear-gradient(135deg, rgba(6,30,60,0.7), rgba(3,15,30,0.5));
+            border: 1px solid rgba(0, 229, 255, 0.25);
+            border-radius: 6px;
+            backdrop-filter: blur(6px);
+            box-shadow: 0 0 24px rgba(0, 229, 255, 0.15), inset 0 0 20px rgba(0, 229, 255, 0.05);
+            z-index: 9;
+        }
+        .panel h3 {
+            font-size: 13px;
+            letter-spacing: 3px;
+            color: var(--cyan);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed rgba(0, 229, 255, 0.25);
+        }
+        .panel .item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin: 8px 0;
+            color: rgba(207, 239, 255, 0.7);
+        }
+        .panel .item b {
+            color: #fff;
+            font-weight: 500;
+            text-shadow: 0 0 6px rgba(0, 229, 255, 0.5);
+        }
+        .panel .legend {
+            margin-top: 14px;
+            font-size: 11px;
+            color: rgba(180, 230, 255, 0.6);
+            line-height: 1.7;
+        }
+        .panel .legend span {
+            display: inline-block;
+            width: 10px; height: 10px;
+            margin-right: 6px;
+            vertical-align: middle;
+            box-shadow: 0 0 6px currentColor;
+        }
+
+        /* 悬浮 tooltip */
+        #tooltip {
+            position: fixed;
+            pointer-events: none;
+            padding: 8px 14px;
+            background: linear-gradient(135deg, rgba(0, 40, 80, 0.85), rgba(0, 15, 30, 0.9));
+            border: 1px solid var(--cyan);
+            border-radius: 4px;
+            color: #fff;
+            font-size: 13px;
+            letter-spacing: 2px;
+            box-shadow: 0 0 16px rgba(0, 229, 255, 0.6);
+            opacity: 0;
+            transform: translate(-50%, -140%);
+            transition: opacity 0.2s;
+            white-space: nowrap;
+            z-index: 20;
+        }
+        #tooltip::after {
+            content: '';
+            position: absolute;
+            bottom: -6px; left: 50%;
+            transform: translateX(-50%) rotate(45deg);
+            width: 10px; height: 10px;
+            background: rgba(0, 15, 30, 0.9);
+            border-right: 1px solid var(--cyan);
+            border-bottom: 1px solid var(--cyan);
+        }
+        #tooltip .value {
+            color: var(--cyan-soft);
+            margin-left: 8px;
+        }
+
+        /* 加载提示 */
+        #loading {
+            position: fixed; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: #030810;
+            color: var(--cyan);
+            font-size: 14px;
+            letter-spacing: 4px;
+            z-index: 100;
+            transition: opacity 0.6s;
+        }
+        #loading .spin {
+            width: 40px; height: 40px;
+            margin-right: 16px;
+            border: 2px solid transparent;
+            border-top-color: var(--cyan);
+            border-right-color: var(--cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            box-shadow: 0 0 16px var(--cyan);
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <!-- HUD -->
+    <div class="hud-top">
+        <div class="title">CHINA&nbsp;·&nbsp;中国可视化</div>
+        <div class="subtitle">3D GEOGRAPHIC INFORMATION SYSTEM</div>
+    </div>
+
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <div class="panel">
+        <h3>◆ DATA PANEL</h3>
+        <div class="item"><span>省级行政区</span><b id="stat-count">—</b></div>
+        <div class="item"><span>当前悬浮</span><b id="stat-hover">—</b></div>
+        <div class="item"><span>渲染帧率</span><b id="stat-fps">—</b></div>
+        <div class="legend">
+            <div><span style="background:#00e5ff"></span> 地图区块</div>
+            <div><span style="background:#ffcf55"></span> 悬浮高亮</div>
+            <div><span style="background:#4ff5ff"></span> 边界光线</div>
+        </div>
+    </div>
+
+    <div id="tooltip"><span class="name"></span><span class="value"></span></div>
+
+    <div id="loading"><div class="spin"></div>正在加载地理数据...</div>
+
+    <!-- Three.js & 依赖 -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+            "d3-geo": "https://cdn.jsdelivr.net/npm/d3-geo@3.1.0/+esm"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+        import { Line2 } from 'three/addons/lines/Line2.js';
+        import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+        import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
+        import { geoMercator } from 'd3-geo';
+
+        // ============ 基础场景 ============
+        const container = document.getElementById('app');
+        const tooltip = document.getElementById('tooltip');
+        const statCount = document.getElementById('stat-count');
+        const statHover = document.getElementById('stat-hover');
+        const statFps = document.getElementById('stat-fps');
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x030810, 70, 280);
+
+        const camera = new THREE.PerspectiveCamera(
+            45, window.innerWidth / window.innerHeight, 0.1, 2000
+        );
+        camera.position.set(0, -70, 95);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000, 0);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 0.85;
+        container.appendChild(renderer.domElement);
+
+        // 后处理：Bloom 发光（调低强度，阈值调高，只保留高亮飞线/边框的辉光）
+        const composer = new EffectComposer(renderer);
+        composer.addPass(new RenderPass(scene, camera));
+        const bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            0.28, 0.35, 0.55
+        );
+        composer.addPass(bloomPass);
+        composer.addPass(new OutputPass());
+
+        // 控制器
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.minDistance = 50;
+        controls.maxDistance = 220;
+        controls.maxPolarAngle = Math.PI / 2.1;
+
+        // 光源（显著调暗，避免过曝）
+        scene.add(new THREE.AmbientLight(0x7fa2c4, 0.55));
+        const dir = new THREE.DirectionalLight(0xffffff, 0.55);
+        dir.position.set(40, 60, 80);
+        scene.add(dir);
+        const pt = new THREE.PointLight(0x3fa8d8, 0.35, 200);
+        pt.position.set(0, 20, 40);
+        scene.add(pt);
+
+        // 存储所有 LineMaterial 以便 resize 时更新 resolution
+        const allLineMaterials = [];
+
+        // ============ 背景网格与粒子 ============
+        function createGrid() {
+            const grid = new THREE.GridHelper(400, 40, 0x00e5ff, 0x0a3a5a);
+            grid.rotation.x = Math.PI / 2;
+            grid.position.z = -6;
+            grid.material.transparent = true;
+            grid.material.opacity = 0.18;
+            scene.add(grid);
+
+            // 第二层更密的格
+            const grid2 = new THREE.GridHelper(400, 160, 0x0a3a5a, 0x0a3a5a);
+            grid2.rotation.x = Math.PI / 2;
+            grid2.position.z = -6.1;
+            grid2.material.transparent = true;
+            grid2.material.opacity = 0.08;
+            scene.add(grid2);
+        }
+
+        function createParticles() {
+            const count = 1500;
+            const geom = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+            for (let i = 0; i < count; i++) {
+                positions[i * 3]     = (Math.random() - 0.5) * 500;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 500;
+                positions[i * 3 + 2] = (Math.random() - 0.2) * 150;
+            }
+            geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const mat = new THREE.PointsMaterial({
+                color: 0x4ff5ff,
+                size: 0.6,
+                transparent: true,
+                opacity: 0.55,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending,
+            });
+            const points = new THREE.Points(geom, mat);
+            scene.add(points);
+            return points;
+        }
+
+        createGrid();
+        const particles = createParticles();
+
+        // 底部中心光柱扩散环
+        const ringGeom = new THREE.RingGeometry(30, 31, 128);
+        const ringMat = new THREE.MeshBasicMaterial({
+            color: 0x00e5ff, side: THREE.DoubleSide, transparent: true, opacity: 0.4,
+        });
+        const ring = new THREE.Mesh(ringGeom, ringMat);
+        ring.position.z = -5.9;
+        scene.add(ring);
+
+        // ============ 中国地图 ============
+        const mapGroup = new THREE.Group();
+        scene.add(mapGroup);
+
+        // GeoJSON 数据源（阿里 DataV 公开 API）
+        const GEO_URL = 'https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json';
+
+        // 投影设置：以中国中心 [104, 37.5] 为基准
+        const projection = geoMercator()
+            .center([104, 37.5])
+            .scale(55)
+            .translate([0, 0]);
+
+        // 将经纬度坐标转换为平面坐标（Y 轴翻转以符合 Three.js）
+        function project([lon, lat]) {
+            const p = projection([lon, lat]);
+            return [p[0], -p[1]];
+        }
+
+        const DEPTH_BASE = 2.2;          // 地图底部基础厚度
+        const DEPTH_HOVER = 5.5;         // 悬浮升起高度
+
+        const provinces = [];            // 所有省份 mesh 列表
+        const raycastTargets = [];       // 供 raycaster 使用
+        const provinceByName = {};       // 按名称索引，供飞线查询中心
+
+        // 模拟人口数据（单位：万人）
+        const POPULATION = {
+            '北京市': 2184, '天津市': 1387, '河北省': 7461,
+            '山西省': 3492, '内蒙古自治区': 2405, '辽宁省': 4229,
+            '吉林省': 2407, '黑龙江省': 3099, '上海市': 2489,
+            '江苏省': 8515, '浙江省': 6577, '安徽省': 6113,
+            '福建省': 4188, '江西省': 4517, '山东省': 10152,
+            '河南省': 9872, '湖北省': 5844, '湖南省': 6622,
+            '广东省': 12656, '广西壮族自治区': 5037, '海南省': 1027,
+            '重庆市': 3212, '四川省': 8372, '贵州省': 3852,
+            '云南省': 4693, '西藏自治区': 366, '陕西省': 3956,
+            '甘肃省': 2492, '青海省': 594, '宁夏回族自治区': 725,
+            '新疆维吾尔自治区': 2587, '台湾省': 2356,
+            '香港特别行政区': 741, '澳门特别行政区': 68,
+        };
+        const POP_MIN = 68, POP_MAX = 12656;
+
+        // 省份顶面材质（暗下来 —— 主要靠描边突出轮廓）
+        function makeTopMaterial() {
+            return new THREE.MeshPhongMaterial({
+                color: 0x123b5e,
+                emissive: 0x06243c,
+                emissiveIntensity: 0.28,
+                specular: 0x225577,
+                shininess: 25,
+                transparent: true,
+                opacity: 0.95,
+            });
+        }
+        // 省份侧面材质 (更暗)
+        function makeSideMaterial() {
+            return new THREE.MeshPhongMaterial({
+                color: 0x0a2338,
+                emissive: 0x000c18,
+                emissiveIntensity: 0.15,
+                transparent: true,
+                opacity: 0.95,
+            });
+        }
+
+        // 生成文字 Sprite（人口/名称标签）—— 默认隐藏，悬浮时显示
+        function makeLabelSprite(name, value) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 160;
+            const ctx = canvas.getContext('2d');
+            // 背景条
+            const grad = ctx.createLinearGradient(0, 0, 0, 160);
+            grad.addColorStop(0,   'rgba(0, 30, 60, 0.0)');
+            grad.addColorStop(0.5, 'rgba(0, 70, 130, 0.6)');
+            grad.addColorStop(1,   'rgba(0, 30, 60, 0.0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 48, 512, 64);
+            // 人口数值（主要信息）
+            ctx.font = 'bold 40px "PingFang SC", "Microsoft YaHei", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = '#00e5ff';
+            ctx.shadowBlur = 12;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(value + ' 万人', 256, 66);
+            // 省名（副信息）
+            ctx.shadowBlur = 5;
+            ctx.font = '22px "PingFang SC", "Microsoft YaHei", sans-serif';
+            ctx.fillStyle = '#9ee8ff';
+            ctx.fillText(name, 256, 108);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.minFilter = THREE.LinearFilter;
+            tex.needsUpdate = true;
+            const mat = new THREE.SpriteMaterial({
+                map: tex, transparent: true, opacity: 0,
+                depthTest: false, depthWrite: false,
+            });
+            const sprite = new THREE.Sprite(mat);
+            sprite.scale.set(7.2, 2.25, 1);   // 缩小整体尺寸
+            sprite.renderOrder = 20;
+            sprite.visible = false;
+            return sprite;
+        }
+
+        function buildProvince(feature) {
+            const { geometry, properties } = feature;
+            const name = properties.name || '未知';
+            const center = properties.center || properties.centroid;
+
+            const container = new THREE.Group();
+            container.userData = { name, baseZ: 0, hovered: false, topLineMats: [] };
+
+            const polygons = geometry.type === 'MultiPolygon'
+                ? geometry.coordinates
+                : [geometry.coordinates];
+
+            polygons.forEach((polygon) => {
+                const outer = polygon[0].map(project);
+                if (outer.length < 3) return;
+
+                const shape = new THREE.Shape();
+                shape.moveTo(outer[0][0], outer[0][1]);
+                for (let i = 1; i < outer.length; i++) {
+                    shape.lineTo(outer[i][0], outer[i][1]);
+                }
+
+                // 孔洞
+                for (let h = 1; h < polygon.length; h++) {
+                    const hole = polygon[h].map(project);
+                    if (hole.length < 3) continue;
+                    const hp = new THREE.Path();
+                    hp.moveTo(hole[0][0], hole[0][1]);
+                    for (let i = 1; i < hole.length; i++) {
+                        hp.lineTo(hole[i][0], hole[i][1]);
+                    }
+                    shape.holes.push(hp);
+                }
+
+                // 挤出几何
+                const geo = new THREE.ExtrudeGeometry(shape, {
+                    depth: DEPTH_BASE,
+                    bevelEnabled: true,
+                    bevelSegments: 1,
+                    bevelSize: 0.08,
+                    bevelThickness: 0.08,
+                });
+                const mesh = new THREE.Mesh(geo, [makeTopMaterial(), makeSideMaterial()]);
+                mesh.userData.parentName = name;
+                container.add(mesh);
+                raycastTargets.push(mesh);
+
+                // ----- 顶部描边：粗 Line2，永远显示（depthTest=false） -----
+                const topPts = [];
+                for (let i = 0; i < outer.length; i++) {
+                    topPts.push(outer[i][0], outer[i][1], DEPTH_BASE + 0.05);
+                }
+                // 闭合回到起点
+                topPts.push(outer[0][0], outer[0][1], DEPTH_BASE + 0.05);
+
+                const topLineGeo = new LineGeometry();
+                topLineGeo.setPositions(topPts);
+                const topLineMat = new LineMaterial({
+                    color: 0x6ff9ff,
+                    linewidth: 1.2,               // 像素级细线
+                    transparent: true,
+                    opacity: 1.0,
+                    depthTest: false,
+                    resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
+                });
+                const topLine = new Line2(topLineGeo, topLineMat);
+                topLine.computeLineDistances();
+                topLine.renderOrder = 5;
+                container.add(topLine);
+                allLineMaterials.push(topLineMat);
+                container.userData.topLineMats.push(topLineMat);
+
+                // 内孔也绘制描边
+                for (let h = 1; h < polygon.length; h++) {
+                    const hole = polygon[h].map(project);
+                    if (hole.length < 3) continue;
+                    const holePts = [];
+                    for (let i = 0; i < hole.length; i++) {
+                        holePts.push(hole[i][0], hole[i][1], DEPTH_BASE + 0.05);
+                    }
+                    holePts.push(hole[0][0], hole[0][1], DEPTH_BASE + 0.05);
+                    const hg = new LineGeometry();
+                    hg.setPositions(holePts);
+                    const hm = new LineMaterial({
+                        color: 0x6ff9ff, linewidth: 0.9,
+                        transparent: true, opacity: 0.8, depthTest: false,
+                        resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
+                    });
+                    const hl = new Line2(hg, hm);
+                    hl.computeLineDistances();
+                    hl.renderOrder = 5;
+                    container.add(hl);
+                    allLineMaterials.push(hm);
+                    container.userData.topLineMats.push(hm);
+                }
+
+                // ----- 底部描边：普通 Line，暗一些 -----
+                const botGeom = new THREE.BufferGeometry();
+                const bp = [];
+                for (let i = 0; i < outer.length; i++) {
+                    bp.push(outer[i][0], outer[i][1], 0.02);
+                }
+                bp.push(outer[0][0], outer[0][1], 0.02);
+                botGeom.setAttribute('position', new THREE.Float32BufferAttribute(bp, 3));
+                const botLine = new THREE.Line(botGeom, new THREE.LineBasicMaterial({
+                    color: 0x1a6faa, transparent: true, opacity: 0.5,
+                }));
+                container.add(botLine);
+            });
+
+            // 记录中心（已投影坐标）
+            const projCenter = center ? project(center) : null;
+            container.userData.center = projCenter;
+
+            // ----- 在省中心添加人口柱状 + 标签 -----
+            if (projCenter) {
+                const pop = POPULATION[name] || 500;
+                container.userData.population = pop;
+
+                const norm = (pop - POP_MIN) / (POP_MAX - POP_MIN);  // 0..1
+                const barHeight = 1.5 + norm * 11;                   // 1.5..12.5
+
+                // 柱身（Cylinder 默认沿 Y 轴，旋转使其沿 +Z）
+                const barGeom = new THREE.CylinderGeometry(0.32, 0.32, barHeight, 18, 1, true);
+                barGeom.translate(0, barHeight / 2, 0);
+                barGeom.rotateX(Math.PI / 2);
+
+                // 顶亮底暗的顶点色
+                const posAttr = barGeom.attributes.position;
+                const colors = new Float32Array(posAttr.count * 3);
+                const topC = new THREE.Color(0x8ff9ff);
+                const botC = new THREE.Color(0x0a3a5a);
+                for (let i = 0; i < posAttr.count; i++) {
+                    const z = posAttr.getZ(i);
+                    const t01 = Math.max(0, Math.min(1, z / barHeight));
+                    const c = botC.clone().lerp(topC, t01);
+                    colors[i * 3]     = c.r;
+                    colors[i * 3 + 1] = c.g;
+                    colors[i * 3 + 2] = c.b;
+                }
+                barGeom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+                const barMat = new THREE.MeshBasicMaterial({
+                    vertexColors: true,
+                    transparent: true, opacity: 0,      // 默认隐藏，悬浮时淡入
+                    side: THREE.DoubleSide,
+                    blending: THREE.AdditiveBlending, depthWrite: false,
+                });
+                barMat.__maxOpacity = 0.85;
+                const bar = new THREE.Mesh(barGeom, barMat);
+                bar.position.set(projCenter[0], projCenter[1], DEPTH_BASE + 0.05);
+                bar.visible = false;
+                container.add(bar);
+
+                // 柱顶发光球
+                const capMat = new THREE.MeshBasicMaterial({
+                    color: 0xffffff, transparent: true, opacity: 0,
+                });
+                capMat.__maxOpacity = 0.95;
+                const cap = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 14), capMat);
+                cap.position.set(projCenter[0], projCenter[1], DEPTH_BASE + 0.05 + barHeight);
+                cap.visible = false;
+                container.add(cap);
+
+                // 柱顶光晕（缩小扩散范围）
+                const haloMat = new THREE.SpriteMaterial({
+                    map: makeHaloTexture(),
+                    color: 0x6ff9ff, transparent: true, opacity: 0,
+                    blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
+                });
+                haloMat.__maxOpacity = 0.85;
+                const halo = new THREE.Sprite(haloMat);
+                halo.scale.set(1.3, 1.3, 1);            // 从 3 → 1.3，缩小约 55%
+                halo.position.copy(cap.position);
+                halo.renderOrder = 6;
+                halo.visible = false;
+                container.add(halo);
+
+                // 标签
+                const label = makeLabelSprite(name, pop);
+                label.position.set(projCenter[0], projCenter[1], DEPTH_BASE + 0.05 + barHeight + 1.6);
+                container.add(label);
+
+                container.userData.cap = cap;
+                container.userData.halo = halo;
+                container.userData.bar = bar;
+                container.userData.label = label;
+                container.userData.haloBaseScale = 1.3;
+                container.userData.barHeight = barHeight;
+            }
+
+            mapGroup.add(container);
+            provinces.push(container);
+            provinceByName[name] = container;
+        }
+
+        // 光晕贴图（径向渐变）
+        function makeHaloTexture() {
+            const c = document.createElement('canvas');
+            c.width = c.height = 128;
+            const ctx = c.getContext('2d');
+            const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+            g.addColorStop(0.0, 'rgba(255,255,255,1)');
+            g.addColorStop(0.25, 'rgba(140,245,255,0.8)');
+            g.addColorStop(0.6, 'rgba(50,180,220,0.2)');
+            g.addColorStop(1.0, 'rgba(0,0,0,0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, 128, 128);
+            return new THREE.CanvasTexture(c);
+        }
+
+        // 加载 geojson 并构建地图
+        async function loadMap() {
+            const res = await fetch(GEO_URL);
+            const geo = await res.json();
+            geo.features.forEach(buildProvince);
+            statCount.textContent = provinces.length;
+
+            // 构建飞线
+            buildFlyLines();
+
+            // 加载完成后整体轻微倾斜摆放
+            mapGroup.rotation.x = -Math.PI / 12;
+
+            document.getElementById('loading').style.opacity = '0';
+            setTimeout(() => document.getElementById('loading').remove(), 600);
+        }
+
+        loadMap().catch(err => {
+            console.error(err);
+            document.getElementById('loading').innerHTML =
+                '<div style="color:#ff6b6b">数据加载失败，请检查网络后刷新</div>';
+        });
+
+        // ============ 飞线系统 ============
+        const flyLineGroup = new THREE.Group();
+        mapGroup.add(flyLineGroup);
+        const flyLines = [];
+
+        function createFlyLine(from, to, color = 0x6ff9ff) {
+            const dist = from.distanceTo(to);
+            const mid = from.clone().add(to).multiplyScalar(0.5);
+            mid.z += Math.min(dist * 0.55, 42) + 6;
+            const curve = new THREE.QuadraticBezierCurve3(from, mid, to);
+
+            // 主曲线（淡色）
+            const staticPts = curve.getPoints(80);
+            const staticGeo = new THREE.BufferGeometry().setFromPoints(staticPts);
+            const staticLine = new THREE.Line(staticGeo, new THREE.LineBasicMaterial({
+                color, transparent: true, opacity: 0.22,
+                blending: THREE.AdditiveBlending, depthWrite: false,
+            }));
+
+            // 追尾粒子（利用 AdditiveBlending 顶点色渐变模拟 alpha fade）
+            const trailCount = 36;
+            const trailPos = new Float32Array(trailCount * 3);
+            const trailCol = new Float32Array(trailCount * 3);
+            const c = new THREE.Color(color);
+            for (let i = 0; i < trailCount; i++) {
+                const fade = Math.pow(1 - i / trailCount, 2.0);
+                trailCol[i*3]   = c.r * fade;
+                trailCol[i*3+1] = c.g * fade;
+                trailCol[i*3+2] = c.b * fade;
+            }
+            const trailGeo = new THREE.BufferGeometry();
+            trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
+            trailGeo.setAttribute('color',    new THREE.BufferAttribute(trailCol, 3));
+            const trailMat = new THREE.PointsMaterial({
+                size: 1.1, vertexColors: true, transparent: true,
+                blending: THREE.AdditiveBlending, depthWrite: false,
+                sizeAttenuation: true,
+            });
+            const trail = new THREE.Points(trailGeo, trailMat);
+
+            // 两端锚点光球
+            const endMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 });
+            const endGeo = new THREE.SphereGeometry(0.35, 12, 12);
+            const fromMark = new THREE.Mesh(endGeo, endMat.clone());
+            fromMark.position.copy(from);
+            const toMark = new THREE.Mesh(endGeo, endMat);
+            toMark.position.copy(to);
+
+            // 终点扩散环
+            const pulseRingGeo = new THREE.RingGeometry(0.6, 0.8, 32);
+            const pulseRingMat = new THREE.MeshBasicMaterial({
+                color, side: THREE.DoubleSide, transparent: true, opacity: 0.8,
+                depthWrite: false, blending: THREE.AdditiveBlending,
+            });
+            const pulseRing = new THREE.Mesh(pulseRingGeo, pulseRingMat);
+            pulseRing.position.copy(to);
+            pulseRing.rotation.x = 0;
+
+            const group = new THREE.Group();
+            group.add(staticLine);
+            group.add(trail);
+            group.add(fromMark);
+            group.add(toMark);
+            group.add(pulseRing);
+
+            group.userData = {
+                curve, trailGeo, trailCount,
+                t: Math.random(),
+                pulseRing, pulseRingMat,
+                speed: 0.18 + Math.random() * 0.1,
+                spacing: 0.006,
+            };
+            return group;
+        }
+
+        function buildFlyLines() {
+            // 以北京为中心辐射到全国主要省份
+            const hub = '北京市';
+            const targets = [
+                '上海市', '广东省', '四川省', '陕西省', '湖北省',
+                '新疆维吾尔自治区', '黑龙江省', '云南省', '西藏自治区',
+                '浙江省', '海南省', '台湾省', '香港特别行政区',
+                '福建省', '辽宁省', '甘肃省', '贵州省', '广西壮族自治区',
+            ];
+            const hubCt = provinceByName[hub];
+            if (!hubCt || !hubCt.userData.center) return;
+            const fromV = new THREE.Vector3(
+                hubCt.userData.center[0], hubCt.userData.center[1], DEPTH_BASE + 0.1
+            );
+
+            targets.forEach(nm => {
+                const ct = provinceByName[nm];
+                if (!ct || !ct.userData.center) return;
+                const toV = new THREE.Vector3(
+                    ct.userData.center[0], ct.userData.center[1], DEPTH_BASE + 0.1
+                );
+                const line = createFlyLine(fromV, toV, 0x6ff9ff);
+                flyLineGroup.add(line);
+                flyLines.push(line);
+            });
+
+            // 再加几条城市互联（暖色）
+            const extraPairs = [
+                ['广东省', '新疆维吾尔自治区'],
+                ['上海市', '四川省'],
+                ['云南省', '黑龙江省'],
+                ['陕西省', '福建省'],
+            ];
+            extraPairs.forEach(([a, b]) => {
+                const ca = provinceByName[a], cb = provinceByName[b];
+                if (!ca || !cb || !ca.userData.center || !cb.userData.center) return;
+                const av = new THREE.Vector3(
+                    ca.userData.center[0], ca.userData.center[1], DEPTH_BASE + 0.1);
+                const bv = new THREE.Vector3(
+                    cb.userData.center[0], cb.userData.center[1], DEPTH_BASE + 0.1);
+                const line = createFlyLine(av, bv, 0xffb86c);
+                flyLineGroup.add(line);
+                flyLines.push(line);
+            });
+        }
+
+        function updateFlyLines(dt, t) {
+            for (const g of flyLines) {
+                const ud = g.userData;
+                ud.t = (ud.t + dt * ud.speed) % 1;
+                const arr = ud.trailGeo.attributes.position.array;
+                for (let i = 0; i < ud.trailCount; i++) {
+                    const u = (ud.t - i * ud.spacing + 1) % 1;
+                    const p = ud.curve.getPoint(u);
+                    arr[i*3]     = p.x;
+                    arr[i*3+1]   = p.y;
+                    arr[i*3+2]   = p.z;
+                }
+                ud.trailGeo.attributes.position.needsUpdate = true;
+
+                // 终点扩散环脉动
+                const pulse = (t * 1.5) % 1;
+                ud.pulseRing.scale.setScalar(1 + pulse * 4);
+                ud.pulseRingMat.opacity = (1 - pulse) * 0.8;
+            }
+        }
+
+        // ============ 交互：悬浮升起 ============
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+        let currentHover = null;
+
+        function onPointerMove(e) {
+            pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+            pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            tooltip.style.left = e.clientX + 'px';
+            tooltip.style.top = e.clientY + 'px';
+        }
+        window.addEventListener('pointermove', onPointerMove);
+
+        // 切换省份高亮
+        function setHovered(container, hovered) {
+            if (!container) return;
+            container.userData.hovered = hovered;
+            container.children.forEach(child => {
+                // 只对 ExtrudeGeometry 的主体做颜色变化（bar/cap/halo/label 不要受影响）
+                if (child.isMesh && Array.isArray(child.material)) {
+                    child.material.forEach((m, idx) => {
+                        if (hovered) {
+                            if (m.__origColor === undefined) m.__origColor = m.color.getHex();
+                            if (m.__origEmissive === undefined) m.__origEmissive = m.emissive.getHex();
+                            if (idx === 0) {
+                                m.color.setHex(0xffa94d);
+                                m.emissive.setHex(0x7a3a00);
+                                m.emissiveIntensity = 0.6;
+                            } else {
+                                m.color.setHex(0x3a2008);
+                                m.emissive.setHex(0x1a0e00);
+                                m.emissiveIntensity = 0.3;
+                            }
+                        } else {
+                            if (m.__origColor !== undefined) m.color.setHex(m.__origColor);
+                            if (m.__origEmissive !== undefined) m.emissive.setHex(m.__origEmissive);
+                            m.emissiveIntensity = idx === 0 ? 0.28 : 0.15;
+                        }
+                    });
+                }
+                // 普通底部 Line
+                if (child.isLine && !child.isLine2 && child.material.isLineBasicMaterial) {
+                    if (hovered) {
+                        if (child.material.__orig === undefined) child.material.__orig = child.material.color.getHex();
+                        child.material.color.setHex(0xffd87a);
+                    } else if (child.material.__orig !== undefined) {
+                        child.material.color.setHex(child.material.__orig);
+                    }
+                }
+            });
+            // 顶部粗线（Line2）
+            if (container.userData.topLineMats) {
+                container.userData.topLineMats.forEach(m => {
+                    if (hovered) {
+                        if (m.__origColor === undefined) m.__origColor = m.color.getHex();
+                        if (m.__origLinewidth === undefined) m.__origLinewidth = m.linewidth;
+                        m.color.setHex(0xffe08a);
+                        m.linewidth = m.__origLinewidth + 1.2;
+                    } else {
+                        if (m.__origColor !== undefined) m.color.setHex(m.__origColor);
+                        if (m.__origLinewidth !== undefined) m.linewidth = m.__origLinewidth;
+                    }
+                });
+            }
+            // 柱子 / 柱顶 / 光晕 / 标签：悬浮时显示，在动画循环做淡入淡出
+            ['bar', 'cap', 'halo', 'label'].forEach(key => {
+                const obj = container.userData[key];
+                if (obj) obj.visible = true;        // 置为可见，透明度由动画控制
+            });
+        }
+
+        // ============ 动画循环 ============
+        const clock = new THREE.Clock();
+        let frameCount = 0, lastFpsTime = performance.now();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = clock.getDelta();
+            const t = clock.elapsedTime;
+
+            // 粒子缓慢旋转
+            particles.rotation.z += dt * 0.02;
+
+            // 光环脉动
+            const s = 1 + Math.sin(t * 1.5) * 0.08;
+            ring.scale.set(s, s, 1);
+            ring.material.opacity = 0.2 + Math.sin(t * 1.5) * 0.1;
+
+            // 飞线追尾
+            updateFlyLines(dt, t);
+
+            // 柱顶光晕呼吸（仅对可见光晕做，范围更小）
+            for (const p of provinces) {
+                if (p.userData.halo && p.userData.halo.visible) {
+                    const base = p.userData.haloBaseScale || 1.3;
+                    const breath = 1 + Math.sin(t * 2 + p.userData.barHeight) * 0.18;
+                    p.userData.halo.scale.set(base * breath, base * breath, 1);
+                }
+            }
+
+            // 射线检测
+            raycaster.setFromCamera(pointer, camera);
+            const hits = raycaster.intersectObjects(raycastTargets, false);
+            let hoveredContainer = null;
+            if (hits.length > 0) {
+                hoveredContainer = hits[0].object.parent;
+            }
+
+            if (hoveredContainer !== currentHover) {
+                if (currentHover) setHovered(currentHover, false);
+                if (hoveredContainer) setHovered(hoveredContainer, true);
+                currentHover = hoveredContainer;
+
+                if (hoveredContainer) {
+                    const pop = hoveredContainer.userData.population;
+                    tooltip.style.opacity = '1';
+                    tooltip.querySelector('.name').textContent = hoveredContainer.userData.name;
+                    tooltip.querySelector('.value').textContent = pop ? `${pop} 万人` : '';
+                    statHover.textContent = hoveredContainer.userData.name +
+                        (pop ? ` · ${pop}万` : '');
+                    document.body.style.cursor = 'pointer';
+                } else {
+                    tooltip.style.opacity = '0';
+                    statHover.textContent = '—';
+                    document.body.style.cursor = 'default';
+                }
+            }
+
+            // 所有省份位置平滑插值（升起/回落）+ 柱/标签淡入淡出
+            const fadeKeys = ['bar', 'cap', 'halo', 'label'];
+            provinces.forEach(p => {
+                const targetZ = p.userData.hovered ? DEPTH_HOVER : 0;
+                p.position.z += (targetZ - p.position.z) * Math.min(dt * 8, 1);
+
+                // 统一处理 bar / cap / halo / label 的透明度淡入淡出
+                for (const key of fadeKeys) {
+                    const obj = p.userData[key];
+                    if (!obj) continue;
+                    const mat = obj.material;
+                    const maxOp = mat.__maxOpacity !== undefined ? mat.__maxOpacity : 1;
+                    const targetOp = p.userData.hovered ? maxOp : 0;
+                    mat.opacity += (targetOp - mat.opacity) * Math.min(dt * 10, 1);
+                    // 完全透明时隐藏，节省绘制
+                    obj.visible = mat.opacity > 0.02;
+                }
+            });
+
+            controls.update();
+            composer.render();
+
+            // FPS 统计
+            frameCount++;
+            const now = performance.now();
+            if (now - lastFpsTime >= 1000) {
+                statFps.textContent = frameCount + ' FPS';
+                frameCount = 0;
+                lastFpsTime = now;
+            }
+        }
+        animate();
+
+        // ============ 自适应 ============
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+            // Line2 的 LineMaterial 需要实时 resolution
+            allLineMaterials.forEach(m => {
+                m.resolution.set(window.innerWidth, window.innerHeight);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>中国 3D 科技地图 - Three.js</title>
+  <style>
+    :root {
+      --primary: #00d9ff;
+      --secondary: #147cff;
+      --text: #d7f7ff;
+      --panel: rgba(5, 22, 48, 0.68);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 45%, rgba(16, 104, 190, 0.34), transparent 38%),
+        radial-gradient(circle at 50% 100%, rgba(0, 217, 255, 0.18), transparent 35%),
+        linear-gradient(180deg, #020711 0%, #04152c 52%, #020711 100%);
+      color: var(--text);
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    }
+
+    #stage {
+      position: fixed;
+      inset: 0;
+    }
+
+    .hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .title {
+      position: absolute;
+      top: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .title h1 {
+      color: #f4fdff;
+      font-size: clamp(24px, 3.2vw, 46px);
+      font-weight: 700;
+      letter-spacing: 10px;
+      text-shadow: 0 0 18px rgba(0, 217, 255, 0.85), 0 0 44px rgba(20, 124, 255, 0.42);
+    }
+
+    .title p {
+      margin-top: 8px;
+      color: rgba(176, 231, 255, 0.68);
+      font-size: 12px;
+      letter-spacing: 4px;
+    }
+
+    .title::before,
+    .title::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 170px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--primary));
+      box-shadow: 0 0 14px var(--primary);
+    }
+
+    .title::before {
+      right: calc(100% + 24px);
+    }
+
+    .title::after {
+      left: calc(100% + 16px);
+      transform: rotate(180deg);
+    }
+
+    .panel {
+      position: absolute;
+      left: 28px;
+      top: 50%;
+      width: 260px;
+      padding: 18px;
+      transform: translateY(-50%);
+      background: linear-gradient(135deg, rgba(9, 37, 78, 0.8), rgba(2, 9, 23, 0.56));
+      border: 1px solid rgba(0, 217, 255, 0.34);
+      border-radius: 16px;
+      box-shadow: 0 0 38px rgba(0, 217, 255, 0.14), inset 0 0 26px rgba(0, 217, 255, 0.08);
+      backdrop-filter: blur(12px);
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      border: 1px solid transparent;
+      background: linear-gradient(135deg, rgba(0, 217, 255, 0.8), transparent 36%, rgba(20, 124, 255, 0.55)) border-box;
+      mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+      mask-composite: exclude;
+      opacity: 0.75;
+    }
+
+    .panel h2 {
+      margin-bottom: 16px;
+      color: var(--primary);
+      font-size: 14px;
+      letter-spacing: 4px;
+    }
+
+    .metric {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 12px 0;
+      color: rgba(215, 247, 255, 0.72);
+      font-size: 13px;
+    }
+
+    .metric strong {
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      text-shadow: 0 0 12px rgba(0, 217, 255, 0.8);
+    }
+
+    .radar {
+      position: absolute;
+      right: 34px;
+      bottom: 34px;
+      width: 188px;
+      height: 188px;
+      border: 1px solid rgba(0, 217, 255, 0.25);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle, transparent 28%, rgba(0, 217, 255, 0.14) 29%, transparent 30%),
+        radial-gradient(circle, transparent 57%, rgba(0, 217, 255, 0.16) 58%, transparent 59%),
+        conic-gradient(from 0deg, rgba(0, 217, 255, 0.48), transparent 32%, transparent);
+      box-shadow: 0 0 32px rgba(0, 217, 255, 0.18), inset 0 0 26px rgba(0, 217, 255, 0.12);
+      animation: radarSpin 7s linear infinite;
+    }
+
+    @keyframes radarSpin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    #tooltip {
+      position: fixed;
+      z-index: 8;
+      min-width: 130px;
+      padding: 10px 14px;
+      color: #fff;
+      font-size: 13px;
+      line-height: 1.6;
+      letter-spacing: 1px;
+      pointer-events: none;
+      background: rgba(1, 15, 35, 0.88);
+      border: 1px solid rgba(0, 217, 255, 0.72);
+      border-radius: 10px;
+      box-shadow: 0 0 22px rgba(0, 217, 255, 0.34);
+      opacity: 0;
+      transform: translate(-50%, calc(-100% - 18px));
+      transition: opacity 0.18s ease;
+    }
+
+    #tooltip b {
+      color: var(--primary);
+      font-size: 16px;
+    }
+
+    #loading {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      background: #020711;
+      color: var(--primary);
+      letter-spacing: 5px;
+      transition: opacity 0.45s ease;
+    }
+
+    .loader {
+      width: 54px;
+      height: 54px;
+      margin: 0 auto 18px;
+      border: 2px solid rgba(0, 217, 255, 0.12);
+      border-top-color: var(--primary);
+      border-right-color: var(--primary);
+      border-radius: 50%;
+      box-shadow: 0 0 18px rgba(0, 217, 255, 0.5);
+      animation: spin 0.9s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="stage"></main>
+
+  <section class="hud">
+    <div class="title">
+      <h1>中国三维地图</h1>
+      <p>THREE.JS DIGITAL GEO VISUALIZATION</p>
+    </div>
+
+    <aside class="panel">
+      <h2>DATA OVERVIEW</h2>
+      <div class="metric"><span>行政区数量</span><strong id="areaCount">--</strong></div>
+      <div class="metric"><span>当前选区</span><strong id="currentArea">--</strong></div>
+      <div class="metric"><span>数据链路</span><strong>实时脉冲</strong></div>
+      <div class="metric"><span>视觉主题</span><strong>蓝色科技</strong></div>
+    </aside>
+
+    <div class="radar"></div>
+  </section>
+
+  <div id="tooltip"></div>
+  <div id="loading">
+    <div>
+      <div class="loader"></div>
+      LOADING MAP DATA
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+      "d3-geo": "https://cdn.jsdelivr.net/npm/d3-geo@3.1.0/+esm"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+    import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+    import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+    import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+    import { geoMercator } from "d3-geo";
+
+    const stage = document.querySelector("#stage");
+    const tooltip = document.querySelector("#tooltip");
+    const loading = document.querySelector("#loading");
+    const areaCount = document.querySelector("#areaCount");
+    const currentArea = document.querySelector("#currentArea");
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x020711, 0.007);
+
+    const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 1500);
+    camera.position.set(0, -86, 92);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    stage.appendChild(renderer.domElement);
+
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.58, 0.45, 0.08));
+    composer.addPass(new OutputPass());
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.minDistance = 58;
+    controls.maxDistance = 180;
+    controls.maxPolarAngle = Math.PI / 2.05;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.45;
+
+    scene.add(new THREE.AmbientLight(0x7acfff, 1.1));
+
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.4);
+    keyLight.position.set(40, -46, 90);
+    scene.add(keyLight);
+
+    const blueLight = new THREE.PointLight(0x00d9ff, 4.8, 240);
+    blueLight.position.set(0, -20, 38);
+    scene.add(blueLight);
+
+    const mapGroup = new THREE.Group();
+    mapGroup.rotation.x = -Math.PI / 13;
+    scene.add(mapGroup);
+
+    const decorationGroup = new THREE.Group();
+    scene.add(decorationGroup);
+
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2(2, 2);
+    const clock = new THREE.Clock();
+    const provinces = [];
+    const provinceLookup = new Map();
+    const raycastTargets = [];
+    const flyLines = [];
+
+    const projection = geoMercator()
+      .center([104.5, 37.5])
+      .scale(56)
+      .translate([0, 0]);
+
+    const depth = 2.8;
+    const dataUrl = "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json";
+
+    const population = {
+      "北京市": 2184,
+      "天津市": 1363,
+      "河北省": 7420,
+      "山西省": 3481,
+      "内蒙古自治区": 2401,
+      "辽宁省": 4197,
+      "吉林省": 2348,
+      "黑龙江省": 3062,
+      "上海市": 2487,
+      "江苏省": 8526,
+      "浙江省": 6627,
+      "安徽省": 6127,
+      "福建省": 4188,
+      "江西省": 4528,
+      "山东省": 10123,
+      "河南省": 9815,
+      "湖北省": 5844,
+      "湖南省": 6604,
+      "广东省": 12706,
+      "广西壮族自治区": 5047,
+      "海南省": 1043,
+      "重庆市": 3191,
+      "四川省": 8374,
+      "贵州省": 3856,
+      "云南省": 4693,
+      "西藏自治区": 365,
+      "陕西省": 3952,
+      "甘肃省": 2490,
+      "青海省": 595,
+      "宁夏回族自治区": 729,
+      "新疆维吾尔自治区": 2587,
+      "台湾省": 2337,
+      "香港特别行政区": 753,
+      "澳门特别行政区": 68
+    };
+
+    function projectPoint(coord) {
+      const [x, y] = projection(coord);
+      return new THREE.Vector2(x, -y);
+    }
+
+    function makeProvinceMaterial() {
+      return [
+        new THREE.MeshPhongMaterial({
+          color: 0x0b6ea8,
+          emissive: 0x063b62,
+          emissiveIntensity: 0.62,
+          specular: 0x7eeaff,
+          shininess: 42,
+          transparent: true,
+          opacity: 0.94
+        }),
+        new THREE.MeshPhongMaterial({
+          color: 0x06314f,
+          emissive: 0x021b33,
+          emissiveIntensity: 0.48,
+          transparent: true,
+          opacity: 0.92
+        })
+      ];
+    }
+
+    function makeGlowTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext("2d");
+      const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gradient.addColorStop(0, "rgba(255,255,255,1)");
+      gradient.addColorStop(0.26, "rgba(0,217,255,0.76)");
+      gradient.addColorStop(1, "rgba(0,217,255,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 128, 128);
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    const glowTexture = makeGlowTexture();
+
+    function addOutline(points, group, color = 0x5df4ff, opacity = 0.86) {
+      const linePoints = points.map((p) => new THREE.Vector3(p.x, p.y, depth + 0.08));
+      linePoints.push(linePoints[0].clone());
+
+      const geometry = new THREE.BufferGeometry().setFromPoints(linePoints);
+      const line = new THREE.Line(
+        geometry,
+        new THREE.LineBasicMaterial({
+          color,
+          transparent: true,
+          opacity,
+          depthTest: false,
+          blending: THREE.AdditiveBlending
+        })
+      );
+      line.renderOrder = 5;
+      group.add(line);
+    }
+
+    function addColumn(group, center, name) {
+      const value = population[name] || 1200;
+      const height = 2.8 + Math.sqrt(value) * 0.13;
+
+      const column = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.28, 0.42, height, 18, 1, true),
+        new THREE.MeshBasicMaterial({
+          color: 0x7ef6ff,
+          transparent: true,
+          opacity: 0.72,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      column.rotation.x = Math.PI / 2;
+      column.position.set(center.x, center.y, depth + height / 2);
+      group.add(column);
+
+      const halo = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: glowTexture,
+          color: 0x00d9ff,
+          transparent: true,
+          opacity: 0.78,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      halo.position.set(center.x, center.y, depth + height + 0.4);
+      halo.scale.set(2.2, 2.2, 1);
+      group.add(halo);
+
+      group.userData.column = column;
+      group.userData.halo = halo;
+      group.userData.columnHeight = height;
+    }
+
+    function buildProvince(feature) {
+      const name = feature.properties.name || "未知区域";
+      const group = new THREE.Group();
+      group.userData = {
+        name,
+        population: population[name] || 0,
+        targetZ: 0,
+        center: null
+      };
+
+      const polygons = feature.geometry.type === "MultiPolygon"
+        ? feature.geometry.coordinates
+        : [feature.geometry.coordinates];
+
+      for (const polygon of polygons) {
+        const outer = polygon[0].map(projectPoint);
+        if (outer.length < 3) continue;
+
+        const shape = new THREE.Shape(outer);
+        for (let i = 1; i < polygon.length; i++) {
+          const hole = polygon[i].map(projectPoint);
+          if (hole.length >= 3) {
+            shape.holes.push(new THREE.Path(hole));
+            addOutline(hole, group, 0x2cc7ff, 0.34);
+          }
+        }
+
+        const geometry = new THREE.ExtrudeGeometry(shape, {
+          depth,
+          bevelEnabled: true,
+          bevelThickness: 0.08,
+          bevelSize: 0.1,
+          bevelSegments: 1
+        });
+        geometry.computeVertexNormals();
+
+        const mesh = new THREE.Mesh(geometry, makeProvinceMaterial());
+        mesh.userData.provinceGroup = group;
+        group.add(mesh);
+        raycastTargets.push(mesh);
+        addOutline(outer, group);
+      }
+
+      const centerCoord = feature.properties.centroid || feature.properties.center;
+      if (centerCoord) {
+        const center = projectPoint(centerCoord);
+        group.userData.center = center;
+        addColumn(group, center, name);
+      }
+
+      mapGroup.add(group);
+      provinces.push(group);
+      provinceLookup.set(name, group);
+    }
+
+    function createSceneDecorations() {
+      const grid = new THREE.GridHelper(420, 42, 0x00d9ff, 0x0a3b66);
+      grid.rotation.x = Math.PI / 2;
+      grid.position.z = -5.5;
+      grid.material.transparent = true;
+      grid.material.opacity = 0.2;
+      decorationGroup.add(grid);
+
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(36, 36.5, 160),
+        new THREE.MeshBasicMaterial({
+          color: 0x00d9ff,
+          transparent: true,
+          opacity: 0.42,
+          side: THREE.DoubleSide,
+          blending: THREE.AdditiveBlending
+        })
+      );
+      ring.position.z = -4.9;
+      decorationGroup.add(ring);
+      decorationGroup.userData.ring = ring;
+
+      const particleCount = 1600;
+      const positions = new Float32Array(particleCount * 3);
+      for (let i = 0; i < particleCount; i++) {
+        positions[i * 3] = (Math.random() - 0.5) * 420;
+        positions[i * 3 + 1] = (Math.random() - 0.5) * 420;
+        positions[i * 3 + 2] = Math.random() * 130 - 20;
+      }
+
+      const particleGeometry = new THREE.BufferGeometry();
+      particleGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      const particles = new THREE.Points(
+        particleGeometry,
+        new THREE.PointsMaterial({
+          color: 0x78f6ff,
+          size: 0.72,
+          transparent: true,
+          opacity: 0.5,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      decorationGroup.add(particles);
+      decorationGroup.userData.particles = particles;
+    }
+
+    function createFlyLine(fromGroup, toGroup, color = 0x7ef6ff) {
+      const from = new THREE.Vector3(fromGroup.userData.center.x, fromGroup.userData.center.y, depth + 0.3);
+      const to = new THREE.Vector3(toGroup.userData.center.x, toGroup.userData.center.y, depth + 0.3);
+      const distance = from.distanceTo(to);
+      const mid = from.clone().lerp(to, 0.5);
+      mid.z += Math.min(42, distance * 0.5) + 8;
+
+      const curve = new THREE.QuadraticBezierCurve3(from, mid, to);
+      const points = curve.getPoints(96);
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(points),
+        new THREE.LineBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.28,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+
+      const head = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: glowTexture,
+          color,
+          transparent: true,
+          opacity: 0.95,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      head.scale.set(2.4, 2.4, 1);
+
+      const group = new THREE.Group();
+      group.add(line, head);
+      group.userData = {
+        curve,
+        head,
+        speed: 0.18 + Math.random() * 0.16,
+        progress: Math.random()
+      };
+      mapGroup.add(group);
+      flyLines.push(group);
+    }
+
+    function buildFlyLines() {
+      const hub = provinceLookup.get("北京市");
+      if (!hub) return;
+
+      [
+        "上海市",
+        "广东省",
+        "四川省",
+        "新疆维吾尔自治区",
+        "黑龙江省",
+        "云南省",
+        "西藏自治区",
+        "海南省",
+        "台湾省",
+        "香港特别行政区"
+      ].forEach((name) => {
+        const target = provinceLookup.get(name);
+        if (target?.userData.center) createFlyLine(hub, target);
+      });
+
+      [
+        ["广东省", "新疆维吾尔自治区"],
+        ["上海市", "四川省"],
+        ["云南省", "黑龙江省"],
+        ["陕西省", "福建省"]
+      ].forEach(([start, end]) => {
+        const from = provinceLookup.get(start);
+        const to = provinceLookup.get(end);
+        if (from?.userData.center && to?.userData.center) createFlyLine(from, to, 0xffd166);
+      });
+    }
+
+    function setHover(group, active) {
+      group.userData.targetZ = active ? 4.8 : 0;
+      group.traverse((child) => {
+        if (!child.isMesh || !Array.isArray(child.material)) return;
+        child.material.forEach((material, index) => {
+          if (!material.userData.baseColor) {
+            material.userData.baseColor = material.color.getHex();
+            material.userData.baseEmissive = material.emissive.getHex();
+          }
+
+          if (active) {
+            material.color.setHex(index === 0 ? 0x19cfff : 0x0a5d91);
+            material.emissive.setHex(index === 0 ? 0x00b7ff : 0x064a78);
+            material.emissiveIntensity = index === 0 ? 1.18 : 0.72;
+          } else {
+            material.color.setHex(material.userData.baseColor);
+            material.emissive.setHex(material.userData.baseEmissive);
+            material.emissiveIntensity = index === 0 ? 0.62 : 0.48;
+          }
+        });
+      });
+    }
+
+    let hoveredProvince = null;
+
+    function updateHover() {
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(raycastTargets, false);
+      const next = hits[0]?.object.userData.provinceGroup || null;
+
+      if (next === hoveredProvince) return;
+      if (hoveredProvince) setHover(hoveredProvince, false);
+      hoveredProvince = next;
+
+      if (hoveredProvince) {
+        setHover(hoveredProvince, true);
+        const { name, population: value } = hoveredProvince.userData;
+        tooltip.innerHTML = `<b>${name}</b><br>常住人口：${value || "--"} 万`;
+        tooltip.style.opacity = "1";
+        currentArea.textContent = name.replace(/省|市|自治区|特别行政区/g, "");
+        document.body.style.cursor = "pointer";
+      } else {
+        tooltip.style.opacity = "0";
+        currentArea.textContent = "--";
+        document.body.style.cursor = "default";
+      }
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.elapsedTime;
+
+      updateHover();
+
+      for (const province of provinces) {
+        province.position.z += (province.userData.targetZ - province.position.z) * Math.min(delta * 7, 1);
+        if (province.userData.halo) {
+          const pulse = 1 + Math.sin(elapsed * 2.8 + province.userData.columnHeight) * 0.22;
+          province.userData.halo.scale.setScalar(2.1 * pulse);
+        }
+      }
+
+      for (const flyLine of flyLines) {
+        const data = flyLine.userData;
+        data.progress = (data.progress + delta * data.speed) % 1;
+        data.head.position.copy(data.curve.getPoint(data.progress));
+        data.head.material.opacity = 0.62 + Math.sin(elapsed * 5 + data.progress * 10) * 0.28;
+      }
+
+      decorationGroup.rotation.z += delta * 0.018;
+      if (decorationGroup.userData.particles) {
+        decorationGroup.userData.particles.rotation.z -= delta * 0.012;
+      }
+      if (decorationGroup.userData.ring) {
+        const scale = 1 + Math.sin(elapsed * 1.5) * 0.08;
+        decorationGroup.userData.ring.scale.set(scale, scale, 1);
+      }
+
+      controls.update();
+      composer.render();
+    }
+
+    async function init() {
+      createSceneDecorations();
+      const response = await fetch(dataUrl);
+      if (!response.ok) throw new Error("GeoJSON 加载失败");
+      const geojson = await response.json();
+      geojson.features.forEach(buildProvince);
+      areaCount.textContent = String(provinces.length);
+      buildFlyLines();
+
+      loading.style.opacity = "0";
+      setTimeout(() => loading.remove(), 500);
+      animate();
+    }
+
+    addEventListener("pointermove", (event) => {
+      pointer.x = (event.clientX / innerWidth) * 2 - 1;
+      pointer.y = -(event.clientY / innerHeight) * 2 + 1;
+      tooltip.style.left = `${event.clientX}px`;
+      tooltip.style.top = `${event.clientY}px`;
+    });
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      composer.setSize(innerWidth, innerHeight);
+    });
+
+    init().catch((error) => {
+      console.error(error);
+      loading.innerHTML = "<div>地图数据加载失败，请检查网络连接后刷新</div>";
+    });
+  </script>
+</body>
+</html>

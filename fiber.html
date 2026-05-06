@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>fiber 架构</title>
+</head>
+<body>
+  <script>
+    /**
+     * fiber 架构
+     * Q：是什么？
+     * A：React 16 引入的一种新的协调算法，旨在提高 React 应用的性能和响应性。
+     * Q：为什么需要 fiber 架构？
+     * A：因为javaScript会操作Dom，浏览器的渲染进程和V8引擎是互斥的
+     *    60hz/s刷新率，16ms内完成更新，否则会出现掉帧
+     *    在每帧内留5ms的时间给js进程，然后把控制权留给渲染进程
+     *    传统的协调算法是同步的，可能会导致界面卡顿
+     *    fiber 架构是异步的，可以在更新过程中暂停和恢复，避免界面卡顿
+     * Q：fiber 架构的核心概念是什么？
+     * A：fiber 是一个 JavaScript 对象，表示一个组件的工作单元
+    */
+  </script>
+</body>
+</html>

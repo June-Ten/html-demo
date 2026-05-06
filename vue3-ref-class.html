@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <script>
+
+class Box {
+  constructor(v) {
+    this._value = v
+  }
+
+  get value() {
+    console.log('get')
+    return this._value
+  }
+
+  set value(v) {
+    console.log('set')
+    this._value = v
+  }
+}
+
+const b = new Box(1)
+// b.value      // 👉 触发 get
+// b.value = 2  // 👉 触发 set
+
+  </script>
+</body>
+</html>

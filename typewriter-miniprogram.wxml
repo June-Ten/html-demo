@@ -1,0 +1,53 @@
+<!-- 微信小程序 WXML -->
+<view class="container">
+  <view class="header">
+    <text class="title">🖊️ 打字机效果</text>
+  </view>
+
+  <!-- 输出区域 -->
+  <view class="output-box">
+    <!-- 使用 rich-text 渲染 Markdown HTML -->
+    <rich-text nodes="{{htmlContent}}"></rich-text>
+    <text class="cursor" wx:if="{{showCursor}}">|</text>
+  </view>
+
+  <!-- 控制按钮 -->
+  <view class="controls">
+    <button 
+      class="btn" 
+      type="primary" 
+      bindtap="startTyping" 
+      disabled="{{isRunning}}">
+      开始输出
+    </button>
+    <button 
+      class="btn" 
+      bindtap="pauseTyping" 
+      disabled="{{!isRunning || isPaused}}">
+      暂停
+    </button>
+    <button 
+      class="btn" 
+      bindtap="resumeTyping" 
+      disabled="{{!isPaused}}">
+      继续
+    </button>
+    <button 
+      class="btn" 
+      bindtap="resetTyping">
+      重置
+    </button>
+  </view>
+
+  <!-- 速度控制 -->
+  <view class="speed-control">
+    <text class="label">输出速度: {{speed}} ms/字符</text>
+    <slider 
+      min="10" 
+      max="200" 
+      value="{{speed}}" 
+      step="10" 
+      bindchange="onSpeedChange" 
+      show-value />
+  </view>
+</view>
