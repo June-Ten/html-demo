@@ -3,243 +3,393 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>中国 3D 科技地图 - Three.js</title>
+  <title>国家市场监督管理总局 · 审查数据中心</title>
   <style>
     :root {
-      --primary: #00d9ff;
-      --secondary: #147cff;
-      --text: #d7f7ff;
-      --panel: rgba(5, 22, 48, 0.68);
+      --bg1: #02081d;
+      --bg2: #09193d;
+      --bg3: #120b33;
+      --panel: rgba(11, 28, 72, 0.72);
+      --panel-deep: rgba(7, 17, 45, 0.84);
+      --line: rgba(100, 184, 255, 0.42);
+      --line-strong: rgba(107, 231, 255, 0.68);
+      --text: #eaf6ff;
+      --muted: #9ed8ff;
+      --accent: #35dbff;
+      --accent2: #6b83ff;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      font-size: clamp(13px, calc(100vw / 120), 16px); /* 1920px -> 16px */
     }
 
-    html,
-    body {
+    html, body {
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background:
-        radial-gradient(circle at 50% 45%, rgba(16, 104, 190, 0.34), transparent 38%),
-        radial-gradient(circle at 50% 100%, rgba(0, 217, 255, 0.18), transparent 35%),
-        linear-gradient(180deg, #020711 0%, #04152c 52%, #020711 100%);
       color: var(--text);
       font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 18% 10%, rgba(37, 159, 255, 0.24), transparent 30%),
+        radial-gradient(circle at 83% 85%, rgba(137, 91, 255, 0.14), transparent 30%),
+        linear-gradient(130deg, var(--bg1) 0%, var(--bg2) 52%, var(--bg3) 100%);
     }
 
-    #stage {
-      position: fixed;
-      inset: 0;
-    }
-
-    .hud {
+    body::before {
+      content: "";
       position: fixed;
       inset: 0;
       pointer-events: none;
-      z-index: 3;
+      background-image:
+        linear-gradient(rgba(74, 148, 255, 0.09) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(74, 148, 255, 0.09) 1px, transparent 1px);
+      background-size: 2.25rem 2.25rem;
+      mask-image: radial-gradient(circle at center, #000 26%, transparent 84%);
+      -webkit-mask-image: radial-gradient(circle at center, #000 26%, transparent 84%);
     }
 
-    .title {
-      position: absolute;
-      top: 28px;
-      left: 50%;
-      transform: translateX(-50%);
-      text-align: center;
-      text-transform: uppercase;
+    .screen {
+      width: 100%;
+      height: 100%;
+      padding: 0.625rem;
+      display: grid;
+      grid-template-rows: 4.375rem 1fr;
+      gap: 0.625rem;
     }
 
-    .title h1 {
-      color: #f4fdff;
-      font-size: clamp(24px, 3.2vw, 46px);
-      font-weight: 700;
-      letter-spacing: 10px;
-      text-shadow: 0 0 18px rgba(0, 217, 255, 0.85), 0 0 44px rgba(20, 124, 255, 0.42);
-    }
-
-    .title p {
-      margin-top: 8px;
-      color: rgba(176, 231, 255, 0.68);
-      font-size: 12px;
-      letter-spacing: 4px;
-    }
-
-    .title::before,
-    .title::after {
-      content: "";
-      position: absolute;
-      top: 50%;
-      width: 170px;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--primary));
-      box-shadow: 0 0 14px var(--primary);
-    }
-
-    .title::before {
-      right: calc(100% + 24px);
-    }
-
-    .title::after {
-      left: calc(100% + 16px);
-      transform: rotate(180deg);
-    }
-
-    .panel {
-      position: absolute;
-      left: 28px;
-      top: 50%;
-      width: 260px;
-      padding: 18px;
-      transform: translateY(-50%);
-      background: linear-gradient(135deg, rgba(9, 37, 78, 0.8), rgba(2, 9, 23, 0.56));
-      border: 1px solid rgba(0, 217, 255, 0.34);
-      border-radius: 16px;
-      box-shadow: 0 0 38px rgba(0, 217, 255, 0.14), inset 0 0 26px rgba(0, 217, 255, 0.08);
-      backdrop-filter: blur(12px);
-    }
-
-    .panel::before {
-      content: "";
-      position: absolute;
-      inset: -1px;
-      border-radius: inherit;
-      border: 1px solid transparent;
-      background: linear-gradient(135deg, rgba(0, 217, 255, 0.8), transparent 36%, rgba(20, 124, 255, 0.55)) border-box;
-      mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
-      mask-composite: exclude;
-      opacity: 0.75;
-    }
-
-    .panel h2 {
-      margin-bottom: 16px;
-      color: var(--primary);
-      font-size: 14px;
-      letter-spacing: 4px;
-    }
-
-    .metric {
+    .header {
+      position: relative;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      margin: 12px 0;
-      color: rgba(215, 247, 255, 0.72);
-      font-size: 13px;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 0.625rem;
+      background: linear-gradient(180deg, rgba(19, 77, 185, 0.74), rgba(12, 28, 89, 0.7));
+      box-shadow: 0 0 2rem rgba(52, 149, 255, 0.22), inset 0 -1rem 1.25rem rgba(0, 0, 0, 0.18);
     }
 
-    .metric strong {
-      color: #fff;
-      font-size: 15px;
-      font-weight: 600;
-      text-shadow: 0 0 12px rgba(0, 217, 255, 0.8);
+    .header h1 {
+      font-size: 1.7rem;
+      letter-spacing: 0.2rem;
+      text-shadow: 0 0 1rem rgba(54, 220, 255, 0.92), 0 0 2rem rgba(107, 131, 255, 0.5);
     }
 
-    .radar {
+    .header::before,
+    .header::after {
+      content: "";
       position: absolute;
-      right: 34px;
-      bottom: 34px;
-      width: 188px;
-      height: 188px;
-      border: 1px solid rgba(0, 217, 255, 0.25);
-      border-radius: 50%;
-      background:
-        radial-gradient(circle, transparent 28%, rgba(0, 217, 255, 0.14) 29%, transparent 30%),
-        radial-gradient(circle, transparent 57%, rgba(0, 217, 255, 0.16) 58%, transparent 59%),
-        conic-gradient(from 0deg, rgba(0, 217, 255, 0.48), transparent 32%, transparent);
-      box-shadow: 0 0 32px rgba(0, 217, 255, 0.18), inset 0 0 26px rgba(0, 217, 255, 0.12);
-      animation: radarSpin 7s linear infinite;
+      top: 50%;
+      width: 16%;
+      height: 0.125rem;
+      background: linear-gradient(90deg, transparent, #68e2ff, transparent);
+      box-shadow: 0 0 0.9rem #4bcfff;
     }
 
-    @keyframes radarSpin {
-      to {
-        transform: rotate(360deg);
-      }
+    .header::before { left: 6%; }
+    .header::after { right: 6%; }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 20rem 1fr 20rem;
+      grid-template-rows: 1fr 9.5rem;
+      gap: 0.625rem;
+      min-height: 0;
     }
+
+    .box {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 0.625rem;
+      background: linear-gradient(155deg, var(--panel), var(--panel-deep));
+      box-shadow: inset 0 0 1.7rem rgba(61, 162, 255, 0.08), 0 0.5rem 1.8rem rgba(4, 8, 28, 0.4);
+      backdrop-filter: blur(0.2rem);
+    }
+
+    .box::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: inherit;
+      border: 1px solid transparent;
+      background: linear-gradient(135deg, rgba(121, 214, 255, 0.52), transparent 36%, rgba(109, 129, 255, 0.52)) border-box;
+      mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+      mask-composite: exclude;
+      opacity: 0.85;
+    }
+
+    .left-col, .right-col {
+      display: grid;
+      gap: 0.625rem;
+      grid-template-rows: 1fr 1fr;
+      min-height: 0;
+    }
+
+    .section-title {
+      padding: 0.625rem 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(82, 173, 255, 0.32);
+      color: var(--muted);
+      font-size: 0.82rem;
+      letter-spacing: 0.03rem;
+    }
+
+    .section-title b {
+      color: #fff;
+      text-shadow: 0 0 0.8rem rgba(77, 214, 255, 0.64);
+      font-weight: 600;
+    }
+
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.77rem; }
+    .data-table th, .data-table td {
+      text-align: left;
+      padding: 0.45rem 0.62rem;
+      border-bottom: 1px solid rgba(74, 176, 255, 0.16);
+      white-space: nowrap;
+    }
+    .data-table th { color: #93d5ff; background: rgba(26, 73, 158, 0.34); font-weight: 500; }
+    .data-table th:last-child, .data-table td:last-child { text-align: right; }
+
+    .left-bottom-content {
+      padding: 0.5rem 0.75rem 0.65rem;
+      display: grid;
+      gap: 0.45rem;
+      height: calc(100% - 2.65rem);
+      overflow: auto;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 4.75rem 1fr 2rem;
+      gap: 0.5rem;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #caedff;
+    }
+
+    .bar {
+      height: 0.42rem;
+      background: rgba(13, 48, 97, 0.92);
+      border: 1px solid rgba(59, 158, 255, 0.22);
+      border-radius: 99rem;
+      overflow: hidden;
+    }
+
+    .bar > span {
+      display: block;
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #2a95ff, #5ef2ff);
+      box-shadow: 0 0 0.62rem rgba(68, 213, 255, 0.66);
+      transition: width 0.8s ease;
+    }
+
+    .center-top { display: grid; grid-template-rows: 5rem 1fr; min-height: 0; }
+    .kpis { padding: 0.5rem 1.25rem 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.625rem; }
+    .kpi {
+      min-height: 4rem;
+      border: 1px solid rgba(100, 176, 255, 0.35);
+      border-radius: 0.625rem;
+      background: linear-gradient(160deg, rgba(33, 92, 195, 0.4), rgba(15, 34, 95, 0.42));
+      box-shadow: inset 0 0 1rem rgba(53, 219, 255, 0.08);
+      display: grid;
+      place-content: center;
+      gap: 0.15rem;
+      text-align: center;
+    }
+    .kpi .label { color: #96d7ff; font-size: 0.72rem; }
+    .kpi .value { color: #fff; font-size: 1.35rem; font-weight: 700; text-shadow: 0 0 0.7rem rgba(67, 201, 255, 0.76); }
+
+    .map-box {
+      margin: 0 0.625rem 0.625rem;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(106, 181, 255, 0.34);
+      border-radius: 0.625rem;
+      background:
+        radial-gradient(circle at 50% 52%, rgba(24, 106, 208, 0.22), rgba(4, 17, 48, 0.92)),
+        linear-gradient(180deg, rgba(8, 31, 79, 0.4), rgba(7, 16, 39, 0.5));
+    }
+
+    #stage { position: absolute; inset: 0; }
+
+    .map-footer {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 0.5rem;
+      padding: 0.2rem 0.9rem;
+      border: 1px solid var(--line-strong);
+      border-radius: 99rem;
+      background: rgba(6, 27, 71, 0.8);
+      font-size: 0.75rem;
+      color: #d8f4ff;
+      text-shadow: 0 0 0.62rem rgba(92, 201, 255, 0.8);
+      pointer-events: none;
+    }
+
+    .right-main { padding-bottom: 0.5rem; display: grid; grid-template-rows: auto 1fr auto; min-height: 0; }
+    .count-list { padding: 0.38rem 0.75rem 0.5rem; overflow: auto; display: grid; gap: 0.25rem; font-size: 0.75rem; }
+    .count-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.4rem 0.5rem;
+      border-radius: 0.4rem;
+      border: 1px solid rgba(64, 154, 240, 0.18);
+      background: rgba(6, 30, 72, 0.35);
+    }
+    .count-row b { color: #fff; text-shadow: 0 0 0.62rem rgba(76, 202, 255, 0.7); }
+
+    .tiny-cards { padding: 0.38rem 0.75rem 0.62rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .tiny-card {
+      min-height: 4.6rem;
+      border: 1px solid rgba(74, 173, 255, 0.34);
+      border-radius: 0.5rem;
+      padding: 0.56rem;
+      background: linear-gradient(145deg, rgba(15, 48, 106, 0.5), rgba(9, 24, 62, 0.4));
+      display: grid;
+      align-content: center;
+      gap: 0.3rem;
+    }
+    .tiny-card .name { color: #a1ddff; font-size: 0.72rem; }
+    .tiny-card .num { font-size: 1.35rem; font-weight: 700; text-shadow: 0 0 0.75rem rgba(65, 197, 255, 0.76); }
+
+    .bottom-box { grid-column: 2 / 3; display: grid; grid-template-columns: 20.6rem 1fr; min-height: 0; }
+    .donut-wrap { border-right: 1px dashed rgba(74, 175, 255, 0.35); display: grid; place-items: center; padding: 0.5rem; gap: 0.625rem; }
+    .donut {
+      width: 8.2rem;
+      height: 8.2rem;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle, rgba(7, 24, 60, 1) 41%, transparent 42%), conic-gradient(#4ce8ff 0 46%, #7da9ff 46% 75%, #3b4bff 75% 100%);
+      box-shadow: 0 0 1.5rem rgba(69, 201, 255, 0.44), inset 0 0 2rem rgba(69, 201, 255, 0.14);
+      border: 1px solid rgba(105, 203, 255, 0.45);
+    }
+    .donut strong { font-size: 1.9rem; text-shadow: 0 0 0.75rem rgba(84, 203, 255, 0.8); }
+    .donut-label { font-size: 0.75rem; color: #aadfff; }
+
+    .bottom-rank { padding: 0.62rem 0.9rem; display: grid; gap: 0.45rem; overflow: auto; }
+    .rank-item { display: grid; grid-template-columns: 1fr 4.4rem; gap: 0.5rem; align-items: center; font-size: 0.75rem; color: #cdeeff; }
+    .rank-bar { position: relative; height: 0.5rem; background: rgba(13, 51, 109, 0.9); border: 1px solid rgba(61, 161, 251, 0.2); border-radius: 99rem; overflow: hidden; margin-top: 0.25rem; }
+    .rank-bar > i { position: absolute; left: 0; top: 0; height: 100%; width: 0; background: linear-gradient(90deg, #2fa5ff, #57f0ff); box-shadow: 0 0 0.62rem rgba(69, 214, 255, 0.66); transition: width 0.85s ease; }
 
     #tooltip {
       position: fixed;
-      z-index: 8;
-      min-width: 130px;
-      padding: 10px 14px;
+      z-index: 30;
+      min-width: 7.5rem;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid rgba(83, 202, 255, 0.7);
+      border-radius: 0.5rem;
+      background: rgba(2, 19, 52, 0.92);
       color: #fff;
-      font-size: 13px;
+      font-size: 0.75rem;
       line-height: 1.6;
-      letter-spacing: 1px;
       pointer-events: none;
-      background: rgba(1, 15, 35, 0.88);
-      border: 1px solid rgba(0, 217, 255, 0.72);
-      border-radius: 10px;
-      box-shadow: 0 0 22px rgba(0, 217, 255, 0.34);
       opacity: 0;
-      transform: translate(-50%, calc(-100% - 18px));
-      transition: opacity 0.18s ease;
+      transform: translate(-50%, -120%);
+      transition: opacity 0.16s ease;
+      box-shadow: 0 0 1.25rem rgba(52, 196, 255, 0.3);
     }
-
-    #tooltip b {
-      color: var(--primary);
-      font-size: 16px;
-    }
+    #tooltip b { color: #4fe8ff; font-size: 0.875rem; }
 
     #loading {
       position: fixed;
       inset: 0;
-      z-index: 10;
+      z-index: 40;
       display: grid;
       place-items: center;
-      background: #020711;
-      color: var(--primary);
-      letter-spacing: 5px;
-      transition: opacity 0.45s ease;
+      background: #040f2a;
+      color: #39d7ff;
+      letter-spacing: 0.2rem;
+      transition: opacity 0.4s ease;
+      font-size: 0.82rem;
     }
-
     .loader {
-      width: 54px;
-      height: 54px;
-      margin: 0 auto 18px;
-      border: 2px solid rgba(0, 217, 255, 0.12);
-      border-top-color: var(--primary);
-      border-right-color: var(--primary);
+      width: 3.2rem;
+      height: 3.2rem;
+      margin: 0 auto 0.85rem;
       border-radius: 50%;
-      box-shadow: 0 0 18px rgba(0, 217, 255, 0.5);
+      border: 0.12rem solid rgba(71, 187, 255, 0.2);
+      border-top-color: #39d7ff;
+      border-right-color: #7a88ff;
+      box-shadow: 0 0 1rem rgba(66, 196, 255, 0.55);
       animation: spin 0.9s linear infinite;
     }
 
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 96rem) {
+      .main-grid { grid-template-columns: 18rem 1fr 18rem; }
+      .bottom-box { grid-template-columns: 18rem 1fr; }
+    }
+
+    @media (max-width: 80rem) {
+      .screen { grid-template-rows: 4.2rem 1fr; }
+      .main-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto auto;
       }
+      .left-col { grid-column: 1 / 2; grid-row: 2; }
+      .center-top { grid-column: 1 / 3; grid-row: 1; min-height: 32rem; }
+      .right-col { grid-column: 2 / 3; grid-row: 2; }
+      .bottom-box { grid-column: 1 / 3; grid-row: 3; }
     }
   </style>
 </head>
 <body>
-  <main id="stage"></main>
-
-  <section class="hud">
-    <div class="title">
-      <h1>中国三维地图</h1>
-      <p>THREE.JS DIGITAL GEO VISUALIZATION</p>
-    </div>
-
-    <aside class="panel">
-      <h2>DATA OVERVIEW</h2>
-      <div class="metric"><span>行政区数量</span><strong id="areaCount">--</strong></div>
-      <div class="metric"><span>当前选区</span><strong id="currentArea">--</strong></div>
-      <div class="metric"><span>数据链路</span><strong>实时脉冲</strong></div>
-      <div class="metric"><span>视觉主题</span><strong>蓝色科技</strong></div>
-    </aside>
-
-    <div class="radar"></div>
-  </section>
-
+  <main class="screen">
+    <header class="header"><h1>国家市场监督管理总局e审查数据中心</h1></header>
+    <section class="main-grid">
+      <div class="left-col">
+        <section class="box">
+          <div class="section-title"><b>AI审查文件数量</b><span id="areaCount">--</span></div>
+          <table class="data-table"><thead><tr><th>省份</th><th>上传文件数</th></tr></thead><tbody id="leftTableBody"></tbody></table>
+        </section>
+        <section class="box">
+          <div class="section-title"><b>AI审查结果高风险省份</b><span id="currentArea">--</span></div>
+          <div id="leftBars" class="left-bottom-content"></div>
+        </section>
+      </div>
+      <section class="box center-top">
+        <div class="kpis">
+          <div class="kpi"><div class="label">用户数</div><div class="value" id="kpiUsers">0</div></div>
+          <div class="kpi"><div class="label">上传文件总数</div><div class="value" id="kpiUploads">0</div></div>
+          <div class="kpi"><div class="label">当前-上海市</div><div class="value" id="kpiCurrent">0</div></div>
+        </div>
+        <div class="map-box"><div id="stage"></div><div class="map-footer">提示风险数：<span id="riskTotal">--</span></div></div>
+      </section>
+      <div class="right-col">
+        <section class="box right-main">
+          <div class="section-title"><b>月度讨论文件相关</b><span>分类统计</span></div>
+          <div id="rightList" class="count-list"></div>
+          <div class="tiny-cards">
+            <div class="tiny-card"><div class="name">开放讨论文案总数</div><div class="num" id="openDocs">0</div></div>
+            <div class="tiny-card"><div class="name">开放讨论回复总量</div><div class="num" id="openReplies">0</div></div>
+          </div>
+        </section>
+        <section class="box right-main">
+          <div class="section-title"><b>权限上线申请文件相关</b><span>汇总</span></div>
+          <div class="tiny-cards" style="margin-top:10px;">
+            <div class="tiny-card"><div class="name">待线上报单文件总数</div><div class="num" id="pendingDocs">0</div></div>
+            <div class="tiny-card"><div class="name">上线单号回复数量</div><div class="num" id="pendingReplies">0</div></div>
+          </div>
+        </section>
+      </div>
+      <section class="box bottom-box">
+        <div class="donut-wrap"><div class="donut"><strong id="donutTotal">0</strong></div><div class="donut-label">AI审查发现风险问题总量</div></div>
+        <div id="bottomRanks" class="bottom-rank"></div>
+      </section>
+    </section>
+  </main>
   <div id="tooltip"></div>
-  <div id="loading">
-    <div>
-      <div class="loader"></div>
-      LOADING MAP DATA
-    </div>
-  </div>
+  <div id="loading"><div><div class="loader"></div>地理数据加载中...</div></div>
 
   <script type="importmap">
   {
@@ -250,7 +400,6 @@
     }
   }
   </script>
-
   <script type="module">
     import * as THREE from "three";
     import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -265,496 +414,279 @@
     const loading = document.querySelector("#loading");
     const areaCount = document.querySelector("#areaCount");
     const currentArea = document.querySelector("#currentArea");
+    const leftTableBody = document.querySelector("#leftTableBody");
+    const leftBars = document.querySelector("#leftBars");
+    const rightList = document.querySelector("#rightList");
+    const bottomRanks = document.querySelector("#bottomRanks");
+    const kpiUsers = document.querySelector("#kpiUsers");
+    const kpiUploads = document.querySelector("#kpiUploads");
+    const kpiCurrent = document.querySelector("#kpiCurrent");
+    const riskTotalEl = document.querySelector("#riskTotal");
+    const donutTotal = document.querySelector("#donutTotal");
+    const openDocs = document.querySelector("#openDocs");
+    const openReplies = document.querySelector("#openReplies");
+    const pendingDocs = document.querySelector("#pendingDocs");
+    const pendingReplies = document.querySelector("#pendingReplies");
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x020711, 0.007);
-
-    const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 1500);
-    camera.position.set(0, -86, 92);
-
+    scene.fog = new THREE.FogExp2(0x030d22, 0.009);
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 1200);
+    camera.position.set(0, -86, 90);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-    renderer.setSize(innerWidth, innerHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.12;
+    renderer.toneMappingExposure = 1.05;
     stage.appendChild(renderer.domElement);
 
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
-    composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.58, 0.45, 0.08));
+    composer.addPass(new UnrealBloomPass(new THREE.Vector2(1, 1), 0.58, 0.4, 0.1));
     composer.addPass(new OutputPass());
 
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.minDistance = 58;
-    controls.maxDistance = 180;
-    controls.maxPolarAngle = Math.PI / 2.05;
-    controls.autoRotate = true;
-    controls.autoRotateSpeed = 0.45;
+    controls.enableDamping = true; controls.dampingFactor = 0.08;
+    controls.minDistance = 54; controls.maxDistance = 168; controls.maxPolarAngle = Math.PI / 2.06;
+    controls.autoRotate = true; controls.autoRotateSpeed = 0.3; controls.enablePan = false;
 
-    scene.add(new THREE.AmbientLight(0x7acfff, 1.1));
+    scene.add(new THREE.AmbientLight(0x8dcfff, 0.96));
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.85);
+    keyLight.position.set(38, -42, 88); scene.add(keyLight);
+    const cyanLight = new THREE.PointLight(0x2de1ff, 3.7, 230);
+    cyanLight.position.set(0, -14, 36); scene.add(cyanLight);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.4);
-    keyLight.position.set(40, -46, 90);
-    scene.add(keyLight);
-
-    const blueLight = new THREE.PointLight(0x00d9ff, 4.8, 240);
-    blueLight.position.set(0, -20, 38);
-    scene.add(blueLight);
-
-    const mapGroup = new THREE.Group();
-    mapGroup.rotation.x = -Math.PI / 13;
-    scene.add(mapGroup);
-
-    const decorationGroup = new THREE.Group();
-    scene.add(decorationGroup);
-
+    const mapGroup = new THREE.Group(); mapGroup.rotation.x = -Math.PI / 9.8; scene.add(mapGroup);
+    const decoGroup = new THREE.Group(); scene.add(decoGroup);
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2(2, 2);
     const clock = new THREE.Clock();
-    const provinces = [];
-    const provinceLookup = new Map();
-    const raycastTargets = [];
-    const flyLines = [];
-
-    const projection = geoMercator()
-      .center([104.5, 37.5])
-      .scale(56)
-      .translate([0, 0]);
-
-    const depth = 2.8;
+    const provinces = []; const provinceLookup = new Map(); const raycastTargets = []; const flyLines = [];
+    const projection = geoMercator().center([104.5, 37.5]).scale(56).translate([0, 0]);
+    const depth = 2.9;
     const dataUrl = "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json";
 
     const population = {
-      "北京市": 2184,
-      "天津市": 1363,
-      "河北省": 7420,
-      "山西省": 3481,
-      "内蒙古自治区": 2401,
-      "辽宁省": 4197,
-      "吉林省": 2348,
-      "黑龙江省": 3062,
-      "上海市": 2487,
-      "江苏省": 8526,
-      "浙江省": 6627,
-      "安徽省": 6127,
-      "福建省": 4188,
-      "江西省": 4528,
-      "山东省": 10123,
-      "河南省": 9815,
-      "湖北省": 5844,
-      "湖南省": 6604,
-      "广东省": 12706,
-      "广西壮族自治区": 5047,
-      "海南省": 1043,
-      "重庆市": 3191,
-      "四川省": 8374,
-      "贵州省": 3856,
-      "云南省": 4693,
-      "西藏自治区": 365,
-      "陕西省": 3952,
-      "甘肃省": 2490,
-      "青海省": 595,
-      "宁夏回族自治区": 729,
-      "新疆维吾尔自治区": 2587,
-      "台湾省": 2337,
-      "香港特别行政区": 753,
-      "澳门特别行政区": 68
+      "北京市":2184,"天津市":1363,"河北省":7420,"山西省":3481,"内蒙古自治区":2401,"辽宁省":4197,"吉林省":2348,"黑龙江省":3062,
+      "上海市":2487,"江苏省":8526,"浙江省":6627,"安徽省":6127,"福建省":4188,"江西省":4528,"山东省":10123,"河南省":9815,
+      "湖北省":5844,"湖南省":6604,"广东省":12706,"广西壮族自治区":5047,"海南省":1043,"重庆市":3191,"四川省":8374,"贵州省":3856,
+      "云南省":4693,"西藏自治区":365,"陕西省":3952,"甘肃省":2490,"青海省":595,"宁夏回族自治区":729,"新疆维吾尔自治区":2587,
+      "台湾省":2337,"香港特别行政区":753,"澳门特别行政区":68
     };
+    const riskData = {
+      "北京市":42,"天津市":24,"河北省":71,"山西省":45,"内蒙古自治区":38,"辽宁省":51,"吉林省":34,"黑龙江省":33,
+      "上海市":86,"江苏省":77,"浙江省":66,"安徽省":49,"福建省":57,"江西省":43,"山东省":79,"河南省":81,
+      "湖北省":63,"湖南省":58,"广东省":95,"广西壮族自治区":54,"海南省":28,"重庆市":41,"四川省":69,"贵州省":40,
+      "云南省":46,"西藏自治区":11,"陕西省":47,"甘肃省":22,"青海省":14,"宁夏回族自治区":19,"新疆维吾尔自治区":36,
+      "台湾省":26,"香港特别行政区":16,"澳门特别行政区":8
+    };
+    const topicData = [["市场准入和退出",282],["产业政策",116],["招商引资",116],["招标投标",116],["政府采购",116],["资质标准",116],["监管执法",116],["其他",116]];
+    const glowTexture = (() => {
+      const c = document.createElement("canvas"); c.width = 128; c.height = 128;
+      const ctx = c.getContext("2d"); const g = ctx.createRadialGradient(64,64,0,64,64,64);
+      g.addColorStop(0,"rgba(255,255,255,1)"); g.addColorStop(0.26,"rgba(65,220,255,0.78)"); g.addColorStop(1,"rgba(65,220,255,0)");
+      ctx.fillStyle = g; ctx.fillRect(0,0,128,128); return new THREE.CanvasTexture(c);
+    })();
 
-    function projectPoint(coord) {
-      const [x, y] = projection(coord);
-      return new THREE.Vector2(x, -y);
-    }
+    const stripArea = (name) => name.replace(/省|市|自治区|特别行政区|回族|维吾尔|壮族/g, "");
+    const projectPoint = (coord) => { const [x, y] = projection(coord); return new THREE.Vector2(x, -y); };
 
-    function makeProvinceMaterial() {
+    function makeProvinceMaterial(name) {
+      const focus = name === "上海市";
       return [
-        new THREE.MeshPhongMaterial({
-          color: 0x0b6ea8,
-          emissive: 0x063b62,
-          emissiveIntensity: 0.62,
-          specular: 0x7eeaff,
-          shininess: 42,
-          transparent: true,
-          opacity: 0.94
-        }),
-        new THREE.MeshPhongMaterial({
-          color: 0x06314f,
-          emissive: 0x021b33,
-          emissiveIntensity: 0.48,
-          transparent: true,
-          opacity: 0.92
-        })
+        new THREE.MeshPhongMaterial({ color: focus ? 0xe4c36d : 0x1f88be, emissive: focus ? 0x7f5e23 : 0x0c4767, emissiveIntensity: focus ? 0.92 : 0.55, specular: focus ? 0xffe8a8 : 0x8ee5ff, shininess: focus ? 70 : 34, transparent: true, opacity: 0.95 }),
+        new THREE.MeshPhongMaterial({ color: focus ? 0x84602b : 0x0a3453, emissive: focus ? 0x3b2710 : 0x031d35, emissiveIntensity: focus ? 0.6 : 0.42, transparent: true, opacity: 0.92 })
       ];
     }
 
-    function makeGlowTexture() {
-      const canvas = document.createElement("canvas");
-      canvas.width = 128;
-      canvas.height = 128;
-      const ctx = canvas.getContext("2d");
-      const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-      gradient.addColorStop(0, "rgba(255,255,255,1)");
-      gradient.addColorStop(0.26, "rgba(0,217,255,0.76)");
-      gradient.addColorStop(1, "rgba(0,217,255,0)");
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, 128, 128);
-      return new THREE.CanvasTexture(canvas);
-    }
-
-    const glowTexture = makeGlowTexture();
-
-    function addOutline(points, group, color = 0x5df4ff, opacity = 0.86) {
+    function addOutline(points, group, color = 0x66ebff, opacity = 0.78) {
       const linePoints = points.map((p) => new THREE.Vector3(p.x, p.y, depth + 0.08));
       linePoints.push(linePoints[0].clone());
-
       const geometry = new THREE.BufferGeometry().setFromPoints(linePoints);
-      const line = new THREE.Line(
-        geometry,
-        new THREE.LineBasicMaterial({
-          color,
-          transparent: true,
-          opacity,
-          depthTest: false,
-          blending: THREE.AdditiveBlending
-        })
-      );
+      const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color, transparent: true, opacity, depthTest: false, blending: THREE.AdditiveBlending }));
       line.renderOrder = 5;
       group.add(line);
     }
 
     function addColumn(group, center, name) {
-      const value = population[name] || 1200;
-      const height = 2.8 + Math.sqrt(value) * 0.13;
-
+      const value = riskData[name] || 10;
+      const h = name === "上海市" ? 10.5 : 2.4 + value * 0.065;
       const column = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.28, 0.42, height, 18, 1, true),
-        new THREE.MeshBasicMaterial({
-          color: 0x7ef6ff,
-          transparent: true,
-          opacity: 0.72,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false
-        })
+        new THREE.CylinderGeometry(0.26, 0.35, h, 16, 1, true),
+        new THREE.MeshBasicMaterial({ color: name === "上海市" ? 0xffdf7c : 0x7ef4ff, transparent: true, opacity: name === "上海市" ? 0.9 : 0.66, blending: THREE.AdditiveBlending, depthWrite: false })
       );
       column.rotation.x = Math.PI / 2;
-      column.position.set(center.x, center.y, depth + height / 2);
+      column.position.set(center.x, center.y, depth + h / 2);
       group.add(column);
-
-      const halo = new THREE.Sprite(
-        new THREE.SpriteMaterial({
-          map: glowTexture,
-          color: 0x00d9ff,
-          transparent: true,
-          opacity: 0.78,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false
-        })
-      );
-      halo.position.set(center.x, center.y, depth + height + 0.4);
-      halo.scale.set(2.2, 2.2, 1);
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: name === "上海市" ? 0xffcf62 : 0x3fe1ff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+      halo.position.set(center.x, center.y, depth + h + 0.35);
+      halo.scale.set(name === "上海市" ? 2.9 : 2.1, name === "上海市" ? 2.9 : 2.1, 1);
       group.add(halo);
-
-      group.userData.column = column;
-      group.userData.halo = halo;
-      group.userData.columnHeight = height;
+      group.userData.column = column; group.userData.halo = halo; group.userData.columnHeight = h;
     }
 
     function buildProvince(feature) {
       const name = feature.properties.name || "未知区域";
       const group = new THREE.Group();
-      group.userData = {
-        name,
-        population: population[name] || 0,
-        targetZ: 0,
-        center: null
-      };
-
-      const polygons = feature.geometry.type === "MultiPolygon"
-        ? feature.geometry.coordinates
-        : [feature.geometry.coordinates];
-
+      group.userData = { name, risk: riskData[name] || 0, targetZ: 0, center: null };
+      const polygons = feature.geometry.type === "MultiPolygon" ? feature.geometry.coordinates : [feature.geometry.coordinates];
       for (const polygon of polygons) {
         const outer = polygon[0].map(projectPoint);
         if (outer.length < 3) continue;
-
         const shape = new THREE.Shape(outer);
         for (let i = 1; i < polygon.length; i++) {
           const hole = polygon[i].map(projectPoint);
-          if (hole.length >= 3) {
-            shape.holes.push(new THREE.Path(hole));
-            addOutline(hole, group, 0x2cc7ff, 0.34);
-          }
+          if (hole.length >= 3) { shape.holes.push(new THREE.Path(hole)); addOutline(hole, group, 0x28ccff, 0.3); }
         }
-
-        const geometry = new THREE.ExtrudeGeometry(shape, {
-          depth,
-          bevelEnabled: true,
-          bevelThickness: 0.08,
-          bevelSize: 0.1,
-          bevelSegments: 1
-        });
+        const geometry = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.1, bevelSegments: 1 });
         geometry.computeVertexNormals();
-
-        const mesh = new THREE.Mesh(geometry, makeProvinceMaterial());
+        const mesh = new THREE.Mesh(geometry, makeProvinceMaterial(name));
         mesh.userData.provinceGroup = group;
         group.add(mesh);
         raycastTargets.push(mesh);
-        addOutline(outer, group);
+        addOutline(outer, group, name === "上海市" ? 0xffdd74 : 0x66ebff, name === "上海市" ? 1 : 0.78);
       }
-
       const centerCoord = feature.properties.centroid || feature.properties.center;
-      if (centerCoord) {
-        const center = projectPoint(centerCoord);
-        group.userData.center = center;
-        addColumn(group, center, name);
-      }
-
-      mapGroup.add(group);
-      provinces.push(group);
-      provinceLookup.set(name, group);
+      if (centerCoord) { const center = projectPoint(centerCoord); group.userData.center = center; addColumn(group, center, name); }
+      mapGroup.add(group); provinces.push(group); provinceLookup.set(name, group);
     }
 
-    function createSceneDecorations() {
-      const grid = new THREE.GridHelper(420, 42, 0x00d9ff, 0x0a3b66);
-      grid.rotation.x = Math.PI / 2;
-      grid.position.z = -5.5;
-      grid.material.transparent = true;
-      grid.material.opacity = 0.2;
-      decorationGroup.add(grid);
-
-      const ring = new THREE.Mesh(
-        new THREE.RingGeometry(36, 36.5, 160),
-        new THREE.MeshBasicMaterial({
-          color: 0x00d9ff,
-          transparent: true,
-          opacity: 0.42,
-          side: THREE.DoubleSide,
-          blending: THREE.AdditiveBlending
-        })
-      );
-      ring.position.z = -4.9;
-      decorationGroup.add(ring);
-      decorationGroup.userData.ring = ring;
-
-      const particleCount = 1600;
-      const positions = new Float32Array(particleCount * 3);
-      for (let i = 0; i < particleCount; i++) {
-        positions[i * 3] = (Math.random() - 0.5) * 420;
-        positions[i * 3 + 1] = (Math.random() - 0.5) * 420;
-        positions[i * 3 + 2] = Math.random() * 130 - 20;
-      }
-
-      const particleGeometry = new THREE.BufferGeometry();
-      particleGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-      const particles = new THREE.Points(
-        particleGeometry,
-        new THREE.PointsMaterial({
-          color: 0x78f6ff,
-          size: 0.72,
-          transparent: true,
-          opacity: 0.5,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false
-        })
-      );
-      decorationGroup.add(particles);
-      decorationGroup.userData.particles = particles;
+    function createDecorations() {
+      const grid = new THREE.GridHelper(410, 40, 0x2fd4ff, 0x0d3b68);
+      grid.rotation.x = Math.PI / 2; grid.position.z = -5.5; grid.material.transparent = true; grid.material.opacity = 0.18; decoGroup.add(grid);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(33, 33.4, 180), new THREE.MeshBasicMaterial({ color: 0x3be5ff, transparent: true, opacity: 0.46, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+      ring.position.z = -5; decoGroup.add(ring); decoGroup.userData.ring = ring;
+      const ring2 = new THREE.Mesh(new THREE.RingGeometry(41, 41.6, 180), new THREE.MeshBasicMaterial({ color: 0x4a95ff, transparent: true, opacity: 0.24, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+      ring2.position.z = -5.06; decoGroup.add(ring2); decoGroup.userData.ring2 = ring2;
+      const count = 1300; const pos = new Float32Array(count * 3);
+      for (let i = 0; i < count; i++) { pos[i * 3] = (Math.random() - 0.5) * 420; pos[i * 3 + 1] = (Math.random() - 0.5) * 420; pos[i * 3 + 2] = Math.random() * 120 - 18; }
+      const geom = new THREE.BufferGeometry(); geom.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      const particles = new THREE.Points(geom, new THREE.PointsMaterial({ color: 0x75eeff, size: 0.68, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+      decoGroup.add(particles); decoGroup.userData.particles = particles;
     }
 
     function createFlyLine(fromGroup, toGroup, color = 0x7ef6ff) {
       const from = new THREE.Vector3(fromGroup.userData.center.x, fromGroup.userData.center.y, depth + 0.3);
       const to = new THREE.Vector3(toGroup.userData.center.x, toGroup.userData.center.y, depth + 0.3);
-      const distance = from.distanceTo(to);
-      const mid = from.clone().lerp(to, 0.5);
-      mid.z += Math.min(42, distance * 0.5) + 8;
-
+      const dist = from.distanceTo(to);
+      const mid = from.clone().lerp(to, 0.5); mid.z += Math.min(36, dist * 0.5) + 8;
       const curve = new THREE.QuadraticBezierCurve3(from, mid, to);
-      const points = curve.getPoints(96);
-      const line = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(points),
-        new THREE.LineBasicMaterial({
-          color,
-          transparent: true,
-          opacity: 0.28,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false
-        })
-      );
-
-      const head = new THREE.Sprite(
-        new THREE.SpriteMaterial({
-          map: glowTexture,
-          color,
-          transparent: true,
-          opacity: 0.95,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false
-        })
-      );
+      const points = curve.getPoints(82);
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false }));
+      const head = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
       head.scale.set(2.4, 2.4, 1);
-
       const group = new THREE.Group();
       group.add(line, head);
-      group.userData = {
-        curve,
-        head,
-        speed: 0.18 + Math.random() * 0.16,
-        progress: Math.random()
-      };
-      mapGroup.add(group);
-      flyLines.push(group);
+      group.userData = { curve, head, speed: 0.16 + Math.random() * 0.11, progress: Math.random() };
+      mapGroup.add(group); flyLines.push(group);
     }
 
     function buildFlyLines() {
-      const hub = provinceLookup.get("北京市");
+      const hub = provinceLookup.get("上海市") || provinceLookup.get("北京市");
       if (!hub) return;
-
-      [
-        "上海市",
-        "广东省",
-        "四川省",
-        "新疆维吾尔自治区",
-        "黑龙江省",
-        "云南省",
-        "西藏自治区",
-        "海南省",
-        "台湾省",
-        "香港特别行政区"
-      ].forEach((name) => {
+      ["北京市","广东省","四川省","新疆维吾尔自治区","黑龙江省","云南省","西藏自治区","海南省","台湾省","香港特别行政区","江苏省","浙江省"].forEach((name) => {
         const target = provinceLookup.get(name);
-        if (target?.userData.center) createFlyLine(hub, target);
+        if (target?.userData.center && target !== hub) createFlyLine(hub, target);
       });
-
-      [
-        ["广东省", "新疆维吾尔自治区"],
-        ["上海市", "四川省"],
-        ["云南省", "黑龙江省"],
-        ["陕西省", "福建省"]
-      ].forEach(([start, end]) => {
-        const from = provinceLookup.get(start);
-        const to = provinceLookup.get(end);
-        if (from?.userData.center && to?.userData.center) createFlyLine(from, to, 0xffd166);
+      [["广东省","新疆维吾尔自治区"],["四川省","黑龙江省"],["云南省","山东省"],["陕西省","福建省"]].forEach(([a, b]) => {
+        const from = provinceLookup.get(a); const to = provinceLookup.get(b);
+        if (from?.userData.center && to?.userData.center) createFlyLine(from, to, 0x7fa9ff);
       });
     }
 
     function setHover(group, active) {
-      group.userData.targetZ = active ? 4.8 : 0;
+      group.userData.targetZ = active ? 4.4 : 0;
       group.traverse((child) => {
         if (!child.isMesh || !Array.isArray(child.material)) return;
-        child.material.forEach((material, index) => {
-          if (!material.userData.baseColor) {
-            material.userData.baseColor = material.color.getHex();
-            material.userData.baseEmissive = material.emissive.getHex();
-          }
-
-          if (active) {
-            material.color.setHex(index === 0 ? 0x19cfff : 0x0a5d91);
-            material.emissive.setHex(index === 0 ? 0x00b7ff : 0x064a78);
-            material.emissiveIntensity = index === 0 ? 1.18 : 0.72;
-          } else {
-            material.color.setHex(material.userData.baseColor);
-            material.emissive.setHex(material.userData.baseEmissive);
-            material.emissiveIntensity = index === 0 ? 0.62 : 0.48;
-          }
+        child.material.forEach((m, idx) => {
+          if (!m.userData.baseColor) { m.userData.baseColor = m.color.getHex(); m.userData.baseEmissive = m.emissive.getHex(); m.userData.baseEI = m.emissiveIntensity; }
+          if (active) { m.color.setHex(idx === 0 ? 0x2fd2ff : 0x1170a8); m.emissive.setHex(idx === 0 ? 0x00b9ff : 0x095078); m.emissiveIntensity = idx === 0 ? 1.08 : 0.7; }
+          else { m.color.setHex(m.userData.baseColor); m.emissive.setHex(m.userData.baseEmissive); m.emissiveIntensity = m.userData.baseEI; }
         });
       });
     }
 
     let hoveredProvince = null;
-
     function updateHover() {
       raycaster.setFromCamera(pointer, camera);
       const hits = raycaster.intersectObjects(raycastTargets, false);
       const next = hits[0]?.object.userData.provinceGroup || null;
-
       if (next === hoveredProvince) return;
       if (hoveredProvince) setHover(hoveredProvince, false);
       hoveredProvince = next;
-
       if (hoveredProvince) {
         setHover(hoveredProvince, true);
-        const { name, population: value } = hoveredProvince.userData;
-        tooltip.innerHTML = `<b>${name}</b><br>常住人口：${value || "--"} 万`;
+        const { name, risk } = hoveredProvince.userData;
+        tooltip.innerHTML = `<b>${name}</b><br>风险提示：${risk}`;
         tooltip.style.opacity = "1";
-        currentArea.textContent = name.replace(/省|市|自治区|特别行政区/g, "");
-        document.body.style.cursor = "pointer";
+        currentArea.textContent = stripArea(name);
+        kpiCurrent.textContent = String(risk);
       } else {
         tooltip.style.opacity = "0";
         currentArea.textContent = "--";
-        document.body.style.cursor = "default";
       }
+    }
+
+    function renderPanels() {
+      const list = Object.entries(riskData).map(([name, risk]) => ({ name, risk, upload: (population[name] || 600) % 930 + 120 })).sort((a, b) => b.risk - a.risk);
+      const leftRows = list.slice(0, 9);
+      leftTableBody.innerHTML = leftRows.map((i) => `<tr><td>${stripArea(i.name)}</td><td>${i.upload}</td></tr>`).join("");
+      const max = leftRows[0].risk;
+      leftBars.innerHTML = leftRows.map((i) => `<div class="bar-row"><span>${stripArea(i.name)}</span><div class="bar"><span style="width:${Math.round((i.risk / max) * 100)}%"></span></div><b>${i.risk}</b></div>`).join("");
+      rightList.innerHTML = topicData.map(([n, c]) => `<div class="count-row"><span>${n}</span><b>${c}</b></div>`).join("");
+      bottomRanks.innerHTML = list.slice(0, 7).map((i, idx) => `<div class="rank-item"><div>${idx + 1}. ${i.name}<div class="rank-bar"><i style="width:${Math.round((i.risk / max) * 100)}%"></i></div></div><b>${i.risk}</b></div>`).join("");
+      const totalRisk = list.reduce((s, i) => s + i.risk, 0);
+      const totalUploads = list.reduce((s, i) => s + i.upload, 0);
+      areaCount.textContent = `${Object.keys(riskData).length} 省级区域`;
+      riskTotalEl.textContent = String(totalRisk); donutTotal.textContent = String(totalRisk);
+      kpiUsers.textContent = "256"; kpiUploads.textContent = String(totalUploads); kpiCurrent.textContent = String(riskData["上海市"] || 0);
+      currentArea.textContent = stripArea(list[0].name); openDocs.textContent = "18"; openReplies.textContent = "28"; pendingDocs.textContent = "16"; pendingReplies.textContent = "16";
     }
 
     function animate() {
       requestAnimationFrame(animate);
-      const delta = clock.getDelta();
-      const elapsed = clock.elapsedTime;
-
+      const delta = clock.getDelta(); const elapsed = clock.elapsedTime;
       updateHover();
-
-      for (const province of provinces) {
-        province.position.z += (province.userData.targetZ - province.position.z) * Math.min(delta * 7, 1);
-        if (province.userData.halo) {
-          const pulse = 1 + Math.sin(elapsed * 2.8 + province.userData.columnHeight) * 0.22;
-          province.userData.halo.scale.setScalar(2.1 * pulse);
+      for (const p of provinces) {
+        p.position.z += (p.userData.targetZ - p.position.z) * Math.min(delta * 7, 1);
+        if (p.userData.halo) {
+          const pulse = 1 + Math.sin(elapsed * 2.4 + p.userData.columnHeight) * 0.2;
+          p.userData.halo.scale.setScalar((p.userData.name === "上海市" ? 2.8 : 2.1) * pulse);
         }
       }
+      for (const f of flyLines) { const d = f.userData; d.progress = (d.progress + delta * d.speed) % 1; d.head.position.copy(d.curve.getPoint(d.progress)); }
+      decoGroup.rotation.z += delta * 0.016;
+      if (decoGroup.userData.particles) decoGroup.userData.particles.rotation.z -= delta * 0.012;
+      if (decoGroup.userData.ring) { const s = 1 + Math.sin(elapsed * 1.25) * 0.06; decoGroup.userData.ring.scale.set(s, s, 1); }
+      if (decoGroup.userData.ring2) { const s2 = 1 + Math.cos(elapsed * 1.1) * 0.05; decoGroup.userData.ring2.scale.set(s2, s2, 1); }
+      controls.update(); composer.render();
+    }
 
-      for (const flyLine of flyLines) {
-        const data = flyLine.userData;
-        data.progress = (data.progress + delta * data.speed) % 1;
-        data.head.position.copy(data.curve.getPoint(data.progress));
-        data.head.material.opacity = 0.62 + Math.sin(elapsed * 5 + data.progress * 10) * 0.28;
-      }
-
-      decorationGroup.rotation.z += delta * 0.018;
-      if (decorationGroup.userData.particles) {
-        decorationGroup.userData.particles.rotation.z -= delta * 0.012;
-      }
-      if (decorationGroup.userData.ring) {
-        const scale = 1 + Math.sin(elapsed * 1.5) * 0.08;
-        decorationGroup.userData.ring.scale.set(scale, scale, 1);
-      }
-
-      controls.update();
-      composer.render();
+    function resizeRenderer() {
+      const rect = stage.getBoundingClientRect();
+      const w = Math.max(320, Math.floor(rect.width)); const h = Math.max(220, Math.floor(rect.height));
+      camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h, false); composer.setSize(w, h);
     }
 
     async function init() {
-      createSceneDecorations();
-      const response = await fetch(dataUrl);
-      if (!response.ok) throw new Error("GeoJSON 加载失败");
-      const geojson = await response.json();
-      geojson.features.forEach(buildProvince);
-      areaCount.textContent = String(provinces.length);
-      buildFlyLines();
-
-      loading.style.opacity = "0";
-      setTimeout(() => loading.remove(), 500);
-      animate();
+      renderPanels(); createDecorations();
+      const response = await fetch(dataUrl); if (!response.ok) throw new Error("GeoJSON 加载失败");
+      const geojson = await response.json(); geojson.features.forEach(buildProvince); buildFlyLines();
+      resizeRenderer(); loading.style.opacity = "0"; setTimeout(() => loading.remove(), 450); animate();
     }
 
-    addEventListener("pointermove", (event) => {
-      pointer.x = (event.clientX / innerWidth) * 2 - 1;
-      pointer.y = -(event.clientY / innerHeight) * 2 + 1;
-      tooltip.style.left = `${event.clientX}px`;
-      tooltip.style.top = `${event.clientY}px`;
+    stage.addEventListener("pointermove", (e) => {
+      const rect = stage.getBoundingClientRect();
+      pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      tooltip.style.left = `${e.clientX}px`; tooltip.style.top = `${e.clientY}px`;
     });
+    stage.addEventListener("pointerleave", () => {
+      pointer.set(2, 2); tooltip.style.opacity = "0";
+      if (hoveredProvince) { setHover(hoveredProvince, false); hoveredProvince = null; }
+    });
+    addEventListener("resize", resizeRenderer);
 
-    addEventListener("resize", () => {
-      camera.aspect = innerWidth / innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(innerWidth, innerHeight);
-      composer.setSize(innerWidth, innerHeight);
-    });
-
-    init().catch((error) => {
-      console.error(error);
-      loading.innerHTML = "<div>地图数据加载失败，请检查网络连接后刷新</div>";
-    });
+    init().catch((error) => { console.error(error); loading.innerHTML = "<div>地图数据加载失败，请检查网络后刷新</div>"; });
   </script>
 </body>
 </html>
