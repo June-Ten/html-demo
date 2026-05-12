@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>中国全域数据可视化大屏</title>
+  <style>
+    :root {
+      --cyan: #16f4ff;
+      --blue: #128bff;
+      --gold: #ffc75a;
+      --panel: rgba(6, 23, 50, 0.82);
+      --text: #eaf8ff;
+      --muted: #9fc6dd;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      color: var(--text);
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 50% 40%, rgba(10, 126, 226, 0.42), transparent 34%),
+        radial-gradient(circle at 50% 83%, rgba(0, 225, 255, 0.2), transparent 34%),
+        linear-gradient(180deg, #07162b 0%, #030914 56%, #01040a 100%);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.42;
+      background-image:
+        linear-gradient(rgba(35, 140, 255, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(35, 140, 255, 0.08) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: radial-gradient(circle at 50% 54%, #000 0 56%, transparent 78%);
+    }
+
+    .screen {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      padding: clamp(10px, 1.45vw, 18px);
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 4;
+      height: clamp(58px, 8vh, 72px);
+      display: grid;
+      grid-template-columns: minmax(190px, 26vw) 1fr minmax(190px, 26vw);
+      align-items: start;
+    }
+
+    .clock,
+    .weather {
+      padding-top: 12px;
+      font-size: clamp(11px, 1.15vw, 14px);
+      color: #d6f7ff;
+      text-shadow: 0 0 10px rgba(0, 218, 255, 0.65);
+    }
+
+    .weather {
+      justify-self: end;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .title-wrap {
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+
+    .title-wrap::before,
+    .title-wrap::after {
+      content: "";
+      position: absolute;
+      top: 18px;
+      width: min(28vw, 300px);
+      height: 25px;
+      background: linear-gradient(90deg, transparent, rgba(0, 180, 255, 0.82), transparent);
+      filter: drop-shadow(0 0 12px rgba(0, 208, 255, 0.85));
+    }
+
+    .title-wrap::before {
+      right: calc(50% + min(20vw, 210px));
+      clip-path: polygon(0 44%, 100% 0, 92% 100%, 10% 100%);
+    }
+
+    .title-wrap::after {
+      left: calc(50% + min(20vw, 210px));
+      clip-path: polygon(0 0, 100% 44%, 90% 100%, 8% 100%);
+    }
+
+    .title {
+      width: min(42vw, 460px);
+      height: clamp(48px, 6.8vh, 58px);
+      padding-top: 8px;
+      text-align: center;
+      font-size: clamp(20px, 2.6vw, 30px);
+      font-weight: 800;
+      letter-spacing: 5px;
+      color: #f6fdff;
+      text-shadow: 0 0 14px rgba(42, 220, 255, 0.95), 0 0 30px rgba(17, 124, 255, 0.85);
+      background:
+        linear-gradient(180deg, rgba(45, 216, 255, 0.28), rgba(8, 64, 132, 0.62)),
+        linear-gradient(90deg, transparent, rgba(61, 233, 255, 0.18), transparent);
+      border: 1px solid rgba(76, 219, 255, 0.48);
+      clip-path: polygon(7% 0, 93% 0, 100% 44%, 88% 100%, 12% 100%, 0 44%);
+      box-shadow: inset 0 0 24px rgba(0, 194, 255, 0.45), 0 0 22px rgba(0, 164, 255, 0.38);
+    }
+
+    .layout {
+      position: absolute;
+      inset: clamp(72px, 10.2vh, 88px) clamp(10px, 1.45vw, 18px) clamp(10px, 1.45vw, 18px);
+      z-index: 2;
+      display: grid;
+      grid-template-columns: clamp(198px, 19vw, 255px) minmax(0, 1fr) clamp(198px, 19vw, 255px);
+      gap: clamp(10px, 1.35vw, 18px);
+    }
+
+    .side {
+      display: grid;
+      gap: clamp(8px, 1.15vh, 14px);
+      min-height: 0;
+    }
+
+    .left {
+      grid-template-rows: 22% 31% 21% minmax(0, 1fr);
+    }
+
+    .right {
+      grid-template-rows: 28% 36% minmax(0, 1fr);
+    }
+
+    .panel {
+      position: relative;
+      min-height: 0;
+      padding: clamp(10px, 1.05vw, 14px);
+      overflow: hidden;
+      border-radius: 10px;
+      border: 1px solid rgba(69, 213, 255, 0.36);
+      background:
+        linear-gradient(180deg, rgba(14, 58, 108, 0.64), rgba(4, 17, 39, 0.86)),
+        var(--panel);
+      box-shadow:
+        inset 0 0 24px rgba(0, 150, 255, 0.22),
+        0 0 18px rgba(0, 136, 255, 0.18),
+        0 0 1px rgba(151, 239, 255, 0.8);
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.32;
+      background:
+        linear-gradient(90deg, rgba(0, 235, 255, 0.38), transparent 28%, transparent 72%, rgba(0, 235, 255, 0.24)),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 18%);
+    }
+
+    .panel-title {
+      position: relative;
+      z-index: 2;
+      height: 22px;
+      margin: 0 0 8px;
+      font-size: clamp(13px, 1.18vw, 15px);
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #f0fbff;
+      text-shadow: 0 0 10px rgba(0, 225, 255, 0.82);
+    }
+
+    .panel-title::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: -5px;
+      width: 76px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--cyan), transparent);
+      box-shadow: 0 0 8px var(--cyan);
+    }
+
+    .chart {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: calc(100% - 30px);
+    }
+
+    .center {
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .cards {
+      position: absolute;
+      left: 22px;
+      right: 22px;
+      top: 0;
+      z-index: 5;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: clamp(8px, 1.15vw, 14px);
+    }
+
+    .card {
+      height: clamp(50px, 7.2vh, 64px);
+      display: grid;
+      grid-template-columns: clamp(36px, 4.5vw, 52px) 1fr;
+      align-items: center;
+      padding: clamp(7px, .9vw, 12px);
+      border-radius: 10px;
+      border: 1px solid rgba(0, 207, 255, 0.32);
+      background:
+        radial-gradient(circle at 22% 50%, rgba(0, 237, 255, 0.28), transparent 42%),
+        linear-gradient(180deg, rgba(16, 54, 95, 0.78), rgba(5, 18, 43, 0.88));
+      box-shadow: inset 0 0 18px rgba(0, 170, 255, 0.2), 0 0 18px rgba(0, 120, 255, 0.15);
+    }
+
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      font-size: clamp(17px, 2vw, 24px);
+      color: var(--cyan);
+      background: rgba(0, 215, 255, 0.08);
+      text-shadow: 0 0 14px var(--cyan);
+    }
+
+    .card-name {
+      font-size: clamp(10px, .95vw, 12px);
+      color: #c1dbef;
+    }
+
+    .card-value {
+      margin-top: 4px;
+      font-size: clamp(14px, 1.6vw, 20px);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.5px;
+      text-shadow: 0 0 12px rgba(0, 219, 255, 0.7);
+    }
+
+    .map-stage {
+      position: absolute;
+      inset: clamp(56px, 8.5vh, 72px) -4% -2%;
+      display: grid;
+      place-items: center;
+    }
+
+    .map-frame {
+      position: relative;
+      width: min(112%, 1040px);
+      height: min(104%, 720px);
+    }
+
+    .map-frame::before {
+      content: "";
+      position: absolute;
+      left: 9%;
+      right: 9%;
+      bottom: 1%;
+      height: 28%;
+      border-radius: 50%;
+      background: radial-gradient(ellipse at center, rgba(0, 225, 255, 0.26), transparent 70%);
+      filter: blur(16px);
+      pointer-events: none;
+    }
+
+    #threeMap {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+    }
+
+    .map-fail {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: none;
+      place-items: center;
+      color: #dffaff;
+      text-shadow: 0 0 12px rgba(0, 220, 255, 0.8);
+    }
+
+    .south-sea {
+      position: absolute;
+      right: clamp(28px, 6vw, 78px);
+      bottom: clamp(36px, 8vh, 70px);
+      z-index: 4;
+      width: clamp(72px, 8vw, 96px);
+      height: clamp(86px, 11vh, 112px);
+      padding-top: clamp(58px, 7.5vh, 78px);
+      border: 1px solid rgba(160, 234, 255, 0.65);
+      border-radius: 4px;
+      background: rgba(8, 27, 52, 0.58);
+      box-shadow: inset 0 0 14px rgba(0, 201, 255, 0.22), 0 0 12px rgba(0, 180, 255, 0.2);
+      color: #e5fbff;
+      font-size: 11px;
+      text-align: center;
+    }
+
+    .south-sea::before {
+      content: "";
+      position: absolute;
+      left: 19px;
+      top: 15px;
+      width: 54px;
+      height: 52px;
+      border: 1px dashed rgba(126, 218, 255, 0.56);
+      border-radius: 44% 52% 47% 58%;
+      box-shadow: 14px 22px 0 -13px #8deeff, -11px 27px 0 -12px #8deeff, 22px 7px 0 -13px #8deeff;
+    }
+
+    .footer-glow {
+      position: absolute;
+      left: 28%;
+      right: 28%;
+      bottom: 20px;
+      z-index: 1;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(0, 222, 255, 0.9), transparent);
+      box-shadow: 0 0 24px rgba(0, 222, 255, 0.9);
+    }
+  </style>
+</head>
+<body>
+  <main class="screen">
+    <header class="topbar">
+      <div class="clock" id="clock"></div>
+      <div class="title-wrap"><div class="title">中国全域数据可视化大屏</div></div>
+      <div class="weather">📍 北京市 <span>☀</span> 晴 23°C</div>
+    </header>
+
+    <section class="layout">
+      <aside class="side left">
+        <section class="panel"><h2 class="panel-title">人口统计</h2><div class="chart" id="populationChart"></div></section>
+        <section class="panel"><h2 class="panel-title">GDP排名 TOP10</h2><div class="chart" id="gdpChart"></div></section>
+        <section class="panel"><h2 class="panel-title">产业结构</h2><div class="chart" id="industryChart"></div></section>
+        <section class="panel"><h2 class="panel-title">近一年GDP趋势</h2><div class="chart" id="trendChart"></div></section>
+      </aside>
+
+      <section class="center">
+        <div class="cards">
+          <div class="card"><div class="card-icon">👤</div><div><div class="card-name">总人口（万）</div><div class="card-value">1,409,670</div></div></div>
+          <div class="card"><div class="card-icon">◎</div><div><div class="card-name">GDP（亿元）</div><div class="card-value">126,0580</div></div></div>
+          <div class="card"><div class="card-icon">▱</div><div><div class="card-name">面积（万km²）</div><div class="card-value">960.00</div></div></div>
+          <div class="card"><div class="card-icon">▥</div><div><div class="card-name">城市数量（个）</div><div class="card-value">293</div></div></div>
+          <div class="card"><div class="card-icon">◉</div><div><div class="card-name">5A景区（个）</div><div class="card-value">339</div></div></div>
+        </div>
+        <div class="map-stage">
+          <div class="map-frame">
+            <div id="threeMap"></div>
+            <div class="map-fail" id="mapFail">地图数据加载失败，请使用 Vite 服务打开</div>
+            <div class="south-sea">南海诸岛</div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side right">
+        <section class="panel"><h2 class="panel-title">土地面积 TOP5</h2><div class="chart" id="areaChart"></div></section>
+        <section class="panel"><h2 class="panel-title">5A景区数量 TOP10</h2><div class="chart" id="spotChart"></div></section>
+        <section class="panel"><h2 class="panel-title">各区发展指数</h2><div class="chart" id="regionChart"></div></section>
+      </aside>
+    </section>
+    <div class="footer-glow"></div>
+  </main>
+
+  <script type="module">
+    import * as echarts from 'echarts'
+    import * as THREE from 'three'
+    import { geoMercator } from 'd3-geo'
+    import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+    import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
+    import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
+    import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
+    import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
+
+    const clock = document.getElementById('clock')
+    const weekMap = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+    const chartInstances = []
+    let threeRenderer
+    let composer
+    let camera
+    let controls
+    let mapContainer
+    let animationId
+
+    function pad(n) {
+      return String(n).padStart(2, '0')
+    }
+
+    function tickClock() {
+      const d = new Date()
+      clock.textContent = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}  ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}  ${weekMap[d.getDay()]}`
+    }
+
+    function makeChart(id, option) {
+      const chart = echarts.init(document.getElementById(id), null, { renderer: 'canvas' })
+      chart.setOption(option)
+      chartInstances.push(chart)
+      return chart
+    }
+
+    function commonText() {
+      return {
+        color: '#ccecff',
+        fontSize: 11,
+      }
+    }
+
+    function makeBarOption(names, values, unit, limit = 10) {
+      const max = Math.max(...values)
+      return {
+        animationDuration: 1200,
+        grid: { left: 58, right: 42, top: 22, bottom: 10 },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          backgroundColor: 'rgba(6,20,42,.92)',
+          borderColor: '#1ae9ff',
+          textStyle: { color: '#eaf8ff' },
+          formatter: (p) => `${p[0].name}<br/>${p[0].value}${unit}`,
+        },
+        xAxis: { show: false, max },
+        yAxis: {
+          type: 'category',
+          inverse: true,
+          data: names.slice(0, limit),
+          axisLine: { show: false },
+          axisTick: { show: false },
+          axisLabel: commonText(),
+        },
+        series: [
+          {
+            type: 'bar',
+            data: values.slice(0, limit),
+            barWidth: 8,
+            itemStyle: {
+              borderRadius: 8,
+              color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                { offset: 0, color: '#10f4ff' },
+                { offset: 1, color: '#168cff' },
+              ]),
+              shadowColor: 'rgba(0,235,255,.85)',
+              shadowBlur: 10,
+            },
+            label: {
+              show: true,
+              position: 'right',
+              color: '#eaf8ff',
+              fontSize: 10,
+              formatter: ({ value }) => value.toLocaleString(),
+            },
+          },
+        ],
+      }
+    }
+
+    function initCharts() {
+      makeChart('populationChart', {
+        color: ['#1497ff', '#ffd258', '#20f0b4'],
+        tooltip: { trigger: 'item' },
+        legend: {
+          right: 0,
+          top: 28,
+          orient: 'vertical',
+          itemWidth: 9,
+          itemHeight: 9,
+          textStyle: commonText(),
+        },
+        series: [
+          {
+            type: 'pie',
+            radius: ['42%', '68%'],
+            center: ['34%', '54%'],
+            data: [
+              { name: '0-14岁', value: 17.95 },
+              { name: '15-59岁', value: 63.35 },
+              { name: '60岁及以上', value: 18.7 },
+            ],
+            label: {
+              show: true,
+              position: 'center',
+              color: '#eaf8ff',
+              formatter: '总人口\n1,409,670',
+              fontSize: 11,
+              lineHeight: 17,
+            },
+            labelLine: { show: false },
+            itemStyle: { shadowColor: 'rgba(0,220,255,.5)', shadowBlur: 14 },
+          },
+        ],
+      })
+
+      makeChart(
+        'gdpChart',
+        makeBarOption(
+          ['广东省', '江苏省', '山东省', '浙江省', '河南省', '四川省', '湖北省', '福建省', '湖南省', '上海市'],
+          [126982, 116364, 83157, 81097, 63423, 59165, 57715, 53728, 50125, 47105],
+          '亿元'
+        )
+      )
+
+      makeChart('industryChart', {
+        color: ['#069aff', '#21efd2', '#ffd24d'],
+        tooltip: { trigger: 'item' },
+        legend: {
+          right: 0,
+          top: 24,
+          orient: 'vertical',
+          itemWidth: 9,
+          itemHeight: 9,
+          textStyle: commonText(),
+        },
+        series: [
+          {
+            type: 'pie',
+            radius: ['48%', '70%'],
+            center: ['34%', '54%'],
+            label: { show: false },
+            labelLine: { show: false },
+            data: [
+              { name: '第一产业', value: 7.1 },
+              { name: '第二产业', value: 39.5 },
+              { name: '第三产业', value: 53.4 },
+            ],
+            itemStyle: { shadowColor: 'rgba(0,220,255,.45)', shadowBlur: 12 },
+          },
+        ],
+      })
+
+      makeChart('trendChart', {
+        grid: { left: 36, right: 12, top: 16, bottom: 24 },
+        tooltip: { trigger: 'axis' },
+        xAxis: {
+          type: 'category',
+          boundaryGap: false,
+          data: ['6月', '7月', '8月', '9月', '10月', '11月', '12月', '1月', '2月', '3月', '4月', '5月'],
+          axisLabel: commonText(),
+          axisLine: { lineStyle: { color: 'rgba(110,210,255,.35)' } },
+          axisTick: { show: false },
+        },
+        yAxis: {
+          type: 'value',
+          splitLine: { lineStyle: { color: 'rgba(72,160,220,.14)' } },
+          axisLabel: { ...commonText(), fontSize: 10 },
+        },
+        series: [
+          {
+            type: 'line',
+            smooth: true,
+            symbolSize: 7,
+            data: [40, 62, 70, 78, 86, 94, 103, 114, 123, 133, 142, 153],
+            lineStyle: { width: 3, color: '#b8ffff', shadowColor: '#00eaff', shadowBlur: 12 },
+            itemStyle: { color: '#d8ffff', borderColor: '#0ff4ff', borderWidth: 2 },
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(0,240,255,.36)' },
+                { offset: 1, color: 'rgba(0,108,255,0)' },
+              ]),
+            },
+          },
+        ],
+      })
+
+      makeChart('areaChart', makeBarOption(['新疆', '西藏', '内蒙古', '青海', '四川'], [166.49, 122.84, 118.3, 72.23, 48.6], '万km²', 5))
+      makeChart('spotChart', makeBarOption(['浙江', '江苏', '四川', '广东', '山东', '河南', '湖北', '湖南', '福建', '安徽'], [21, 20, 20, 19, 18, 16, 15, 14, 13, 12], '个'))
+      makeChart('regionChart', makeBarOption(['华北地区', '东北地区', '华东地区', '华中地区', '华南地区', '西南地区', '西北地区'], [78.5, 63.2, 85.6, 71.4, 82.9, 68.7, 61.3], ''))
+    }
+
+    function forEachPolygon(geometry, fn) {
+      if (!geometry?.coordinates) return
+      if (geometry.type === 'Polygon') fn(geometry.coordinates)
+      if (geometry.type === 'MultiPolygon') geometry.coordinates.forEach(fn)
+    }
+
+    function signedArea2(pts) {
+      let s = 0
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i]
+        const q = pts[(i + 1) % pts.length]
+        s += p.x * q.y - q.x * p.y
+      }
+      return s * 0.5
+    }
+
+    function ringToVector2s(ring, toXY) {
+      let pts = ring.map((coord) => toXY(coord[0], coord[1]))
+      if (pts.length < 3) return null
+      if (pts[0].distanceTo(pts[pts.length - 1]) < 1e-8) pts = pts.slice(0, -1)
+      return pts.length >= 3 ? pts : null
+    }
+
+    function polygonToShape(rings, toXY) {
+      const outer = ringToVector2s(rings[0], toXY)
+      if (!outer) return null
+      if (signedArea2(outer) < 0) outer.reverse()
+      const shape = new THREE.Shape(outer)
+      for (let i = 1; i < rings.length; i++) {
+        const hole = ringToVector2s(rings[i], toXY)
+        if (!hole) continue
+        if (signedArea2(hole) > 0) hole.reverse()
+        shape.holes.push(new THREE.Path(hole))
+      }
+      return shape
+    }
+
+    function makeTextSprite(text) {
+      const canvas = document.createElement('canvas')
+      canvas.width = 128
+      canvas.height = 36
+      const ctx = canvas.getContext('2d')
+      ctx.font = '16px Microsoft YaHei'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.lineWidth = 4
+      ctx.strokeStyle = 'rgba(0,8,20,.75)'
+      ctx.fillStyle = 'rgba(225, 250, 255, .72)'
+      ctx.strokeText(text, 64, 18)
+      ctx.fillText(text, 64, 18)
+      const texture = new THREE.CanvasTexture(canvas)
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0.8,
+        depthWrite: false,
+      }))
+      sprite.scale.set(2.55, 0.72, 1)
+      return sprite
+    }
+
+    async function initThreeMap() {
+      mapContainer = document.getElementById('threeMap')
+      const width = mapContainer.clientWidth
+      const height = mapContainer.clientHeight
+      const scene = new THREE.Scene()
+      scene.background = null
+
+      scene.add(new THREE.AmbientLight(0x8ab4ff, 0.16))
+      const mainLight = new THREE.DirectionalLight(0xe8f8ff, 0.58)
+      mainLight.position.set(28, 36, 42)
+      scene.add(mainLight)
+      const cyanLight = new THREE.DirectionalLight(0x00eaff, 0.18)
+      cyanLight.position.set(-30, -15, 24)
+      scene.add(cyanLight)
+
+      camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 1000)
+      camera.up.set(0, 1, 0)
+      camera.position.set(0, -48, 30)
+      camera.lookAt(0, 0, 0)
+
+      threeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+      const pr = Math.min(window.devicePixelRatio, 2)
+      threeRenderer.setPixelRatio(pr)
+      threeRenderer.setSize(width, height)
+      threeRenderer.outputColorSpace = THREE.SRGBColorSpace
+      threeRenderer.toneMapping = THREE.ACESFilmicToneMapping
+      threeRenderer.toneMappingExposure = 0.5
+      mapContainer.appendChild(threeRenderer.domElement)
+
+      composer = new EffectComposer(threeRenderer)
+      composer.setPixelRatio(pr)
+      composer.setSize(width, height)
+      composer.addPass(new RenderPass(scene, camera))
+      composer.addPass(new UnrealBloomPass(new THREE.Vector2(width, height), 0.22, 0.28, 0.58))
+      composer.addPass(new OutputPass())
+
+      controls = new OrbitControls(camera, threeRenderer.domElement)
+      controls.enableDamping = true
+      controls.dampingFactor = 0.08
+      controls.minDistance = 18
+      controls.maxDistance = 120
+
+      const res = await fetch('/100000_full.json').catch(() => fetch('./public/100000_full.json'))
+      if (!res.ok) throw new Error('地图数据加载失败')
+      const data = await res.json()
+      createChinaMesh(scene, data)
+
+      function animate() {
+        animationId = requestAnimationFrame(animate)
+        controls.update()
+        composer.render()
+      }
+      animate()
+    }
+
+    function createChinaMesh(scene, data) {
+      const mapExtent = 48
+      const projection = geoMercator().fitExtent([[0, 0], [mapExtent, mapExtent]], data)
+      const cx = mapExtent / 2
+      const cy = mapExtent / 2
+      const depth = mapExtent * 0.032
+      const labels = new Set(['新疆维吾尔自治区', '西藏自治区', '青海省', '四川省', '云南省', '内蒙古自治区', '黑龙江省', '广东省', '台湾省'])
+      const hotCities = [
+        [116.4074, 39.9042],
+        [121.4737, 31.2304],
+        [113.2644, 23.1291],
+        [114.3054, 30.5928],
+        [104.0665, 30.5723],
+        [108.9398, 34.3416],
+        [118.7969, 32.0603],
+        [120.1551, 30.2741],
+        [106.5516, 29.563],
+        [102.8329, 24.8801],
+      ]
+
+      function toXY(lng, lat) {
+        const p = projection([lng, lat])
+        if (!p) return new THREE.Vector2(0, 0)
+        return new THREE.Vector2(p[0] - cx, -(p[1] - cy))
+      }
+
+      function toVec3(lng, lat, z = depth + 0.04) {
+        const p = toXY(lng, lat)
+        return new THREE.Vector3(p.x, p.y, z)
+      }
+
+      const group = new THREE.Group()
+      const mapMaterial = new THREE.MeshStandardMaterial({
+        color: 0x0b568f,
+        emissive: 0x04283f,
+        emissiveIntensity: 0.16,
+        metalness: 0.12,
+        roughness: 0.48,
+        side: THREE.DoubleSide,
+      })
+      const sideMaterial = new THREE.MeshStandardMaterial({
+        color: 0x032f61,
+        emissive: 0x032a42,
+        emissiveIntensity: 0.14,
+        metalness: 0.08,
+        roughness: 0.48,
+        side: THREE.DoubleSide,
+      })
+      const borderMaterial = new THREE.LineBasicMaterial({
+        color: 0x7feaff,
+        transparent: true,
+        opacity: 0.62,
+      })
+      const glowMaterial = new THREE.LineBasicMaterial({
+        color: 0x16f4ff,
+        transparent: true,
+        opacity: 0.16,
+      })
+
+      data.features.forEach((feature) => {
+        forEachPolygon(feature.geometry, (rings) => {
+          const shape = polygonToShape(rings, toXY)
+          if (!shape) return
+          try {
+            const geometry = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false })
+            const mesh = new THREE.Mesh(geometry, [mapMaterial, sideMaterial])
+
+            rings.forEach((ring) => {
+              const pts2 = ringToVector2s(ring, toXY)
+              if (!pts2) return
+              const pts3 = pts2.map((p) => new THREE.Vector3(p.x, p.y, depth + 0.05))
+              mesh.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts3), borderMaterial))
+              const glowPts = pts2.map((p) => new THREE.Vector3(p.x, p.y, depth + 0.09))
+              const glowLine = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(glowPts), glowMaterial)
+              if (ring === rings[0]) mesh.add(glowLine)
+              const sideGlowPts = pts2.map((p) => new THREE.Vector3(p.x, p.y, depth * 0.45))
+              const sideGlowLine = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(sideGlowPts), glowMaterial)
+              if (ring === rings[0]) mesh.add(sideGlowLine)
+            })
+
+            group.add(mesh)
+          } catch {
+            // Ignore invalid degenerate rings in source data.
+          }
+        })
+
+        const name = feature.properties?.name
+        const center = feature.properties?.centroid || feature.properties?.center
+        if (center && labels.has(name)) {
+          const label = makeTextSprite(name.replace('维吾尔自治区', '').replace('壮族自治区', '').replace('自治区', '').replace('省', ''))
+          const pos = toVec3(center[0], center[1], depth + 0.36)
+          label.position.copy(pos)
+          group.add(label)
+        }
+      })
+
+      hotCities.forEach((coord) => {
+        const pos = toVec3(coord[0], coord[1], depth + 0.22)
+        const dot = new THREE.Mesh(
+          new THREE.SphereGeometry(0.12, 12, 8),
+          new THREE.MeshBasicMaterial({
+            color: 0xf8c46a,
+            transparent: true,
+            opacity: 0.75,
+          })
+        )
+        dot.position.copy(pos)
+        const halo = new THREE.Mesh(
+          new THREE.RingGeometry(0.22, 0.34, 32),
+          new THREE.MeshBasicMaterial({
+            color: 0xffd36a,
+            transparent: true,
+            opacity: 0.12,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+          })
+        )
+        halo.position.copy(pos)
+        group.add(dot, halo)
+      })
+
+      group.updateMatrixWorld(true)
+      const box = new THREE.Box3().setFromObject(group)
+      const center = new THREE.Vector3()
+      box.getCenter(center)
+      group.position.sub(center)
+      group.rotation.x = -0.13
+
+      const grid = new THREE.GridHelper(mapExtent * 1.32, 28, 0x1f4060, 0x0f2238)
+      grid.rotation.x = -Math.PI / 2
+      grid.position.z = -0.08
+      grid.material.transparent = true
+      grid.material.opacity = 0.16
+      const stars = new THREE.BufferGeometry()
+      const starPositions = []
+      for (let i = 0; i < 160; i++) {
+        const x = (Math.random() - 0.5) * mapExtent * 1.55
+        const y = (Math.random() - 0.5) * mapExtent * 1.2
+        const z = -0.1 + Math.random() * 0.16
+        starPositions.push(x, y, z)
+      }
+      stars.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3))
+      const starPoints = new THREE.Points(
+        stars,
+        new THREE.PointsMaterial({
+          color: 0x2ce9ff,
+          size: 0.08,
+          transparent: true,
+          opacity: 0.14,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        })
+      )
+      scene.add(grid)
+      scene.add(starPoints)
+      scene.add(group)
+    }
+
+    function resizeAll() {
+      chartInstances.forEach((chart) => chart.resize())
+      if (!mapContainer || !threeRenderer || !composer || !camera) return
+      const width = mapContainer.clientWidth
+      const height = mapContainer.clientHeight
+      camera.aspect = width / height
+      camera.updateProjectionMatrix()
+      threeRenderer.setSize(width, height)
+      composer.setSize(width, height)
+    }
+
+    tickClock()
+    setInterval(tickClock, 1000)
+    initCharts()
+    initThreeMap().catch((err) => {
+      console.error(err)
+      document.getElementById('mapFail').style.display = 'grid'
+    })
+    window.addEventListener('resize', resizeAll)
+    window.addEventListener('beforeunload', () => {
+      if (animationId) cancelAnimationFrame(animationId)
+    })
+  </script>
+</body>
+</html>
