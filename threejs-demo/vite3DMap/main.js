@@ -6,22 +6,53 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 
-let scene, camera, renderer
-let composer
-let controls
-let container
-let debugFrameGroup
+const CONFIG = {
+  mapExtent: 42,
+  extrudeDepthRatio: 0.022,
+  bloom: {
+    strength: 0.55,
+    radius: 0.4,
+    threshold: 0.22,
+  },
+  renderer: {
+    maxPixelRatio: 2,
+    toneMappingExposure: 0.78,
+  },
+  controls: {
+    minDistance: 8,
+    maxDistance: 200,
+    dampingFactor: 0.08,
+  },
+}
+
+let scene,
+  camera,
+  renderer,
+  composer,
+  controls,
+  container,
+  debugFrameGroup,
+  mapRoot
+let rafId = 0
+let animationStarted = false
+let appMounted = false
+
+const _tmpBox = new THREE.Box3()
+const _tmpVec = new THREE.Vector3()
 
 export function initMap() {
+  if (appMounted) return
+  appMounted = true
+
   container = document.getElementById('three-container')
   if (!container) return
 
   createScene()
   loadChinaMap()
-    .then(() => animate())
+    .then(() => startAnimationLoop())
     .catch((err) => {
       console.error(err)
-      animate()
+      startAnimationLoop()
     })
   window.addEventListener('resize', onResize)
 }
@@ -40,9 +71,24 @@ function onResize() {
   }
 }
 
+/** 释放一组 Object3D 下的 geometry / material / texture */
+function disposeObject3D(root) {
+  root.traverse((obj) => {
+    if (obj.geometry) obj.geometry.dispose()
+    if (obj.material) {
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
+      for (const mat of mats) {
+        if (mat.map) mat.map.dispose()
+        mat.dispose()
+      }
+    }
+  })
+}
+
 function createScene() {
   const w = container.clientWidth || window.innerWidth
   const h = container.clientHeight || window.innerHeight
+  const pr = Math.min(window.devicePixelRatio, CONFIG.renderer.maxPixelRatio)
 
   scene = new THREE.Scene()
   scene.background = new THREE.Color(0x030910)
@@ -60,31 +106,31 @@ function createScene() {
 
   camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 1000)
   camera.up.set(0, 1, 0)
-  // 略偏南、带俯角：挤出沿 +Z，侧壁可见；屏幕向上仍为北 (+Y)
   camera.position.set(0, -34, 32)
   camera.lookAt(0, 0, 0)
-  const pr = Math.min(window.devicePixelRatio, 2)
+
   renderer = new THREE.WebGLRenderer({ antialias: true })
   renderer.setPixelRatio(pr)
   renderer.setSize(w, h)
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 0.78
+  renderer.toneMappingExposure = CONFIG.renderer.toneMappingExposure
   container.appendChild(renderer.domElement)
 
   composer = new EffectComposer(renderer)
   composer.setPixelRatio(pr)
   composer.setSize(w, h)
   composer.addPass(new RenderPass(scene, camera))
-  const bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 0.55, 0.4, 0.22)
-  composer.addPass(bloomPass)
+  composer.addPass(
+    new UnrealBloomPass(new THREE.Vector2(w, h), CONFIG.bloom.strength, CONFIG.bloom.radius, CONFIG.bloom.threshold)
+  )
   composer.addPass(new OutputPass())
 
   controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
-  controls.dampingFactor = 0.08
-  controls.minDistance = 8
-  controls.maxDistance = 200
+  controls.dampingFactor = CONFIG.controls.dampingFactor
+  controls.minDistance = CONFIG.controls.minDistance
+  controls.maxDistance = CONFIG.controls.maxDistance
 }
 
 /** GeoJSON Polygon / MultiPolygon 的每个面（外环 + 洞） */
@@ -99,9 +145,10 @@ function forEachPolygon(geometry, fn) {
 
 function signedArea2(pts) {
   let s = 0
-  for (let i = 0; i < pts.length; i++) {
+  const n = pts.length
+  for (let i = 0; i < n; i++) {
     const p = pts[i]
-    const q = pts[(i + 1) % pts.length]
+    const q = pts[(i + 1) % n]
     s += p.x * q.y - q.x * p.y
   }
   return s * 0.5
@@ -112,8 +159,7 @@ function ringToVector2s(ring, toXY) {
   if (raw.length < 3) return null
   let pts = raw
   if (pts[0].distanceTo(pts[pts.length - 1]) < 1e-8) pts = pts.slice(0, -1)
-  if (pts.length < 3) return null
-  return pts
+  return pts.length >= 3 ? pts : null
 }
 
 function polygonToShape(rings, toXY) {
@@ -132,7 +178,10 @@ function polygonToShape(rings, toXY) {
 }
 
 function addDebugFrame(mapExtent) {
-  if (debugFrameGroup) scene.remove(debugFrameGroup)
+  if (debugFrameGroup) {
+    scene.remove(debugFrameGroup)
+    disposeObject3D(debugFrameGroup)
+  }
   debugFrameGroup = new THREE.Group()
   debugFrameGroup.name = 'debug-frame'
 
@@ -151,7 +200,7 @@ async function loadChinaMap() {
   if (!res.ok) throw new Error(`加载地图数据失败: ${res.status}`)
   const data = await res.json()
 
-  const mapExtent = 42
+  const mapExtent = CONFIG.mapExtent
   const projection = geoMercator().fitExtent(
     [
       [0, 0],
@@ -170,7 +219,7 @@ async function loadChinaMap() {
     return new THREE.Vector2(px - cx, -(py - cy))
   }
 
-  const extrudeDepth = mapExtent * 0.022
+  const extrudeDepth = mapExtent * CONFIG.extrudeDepthRatio
   const extrudeSettings = {
     depth: extrudeDepth,
     bevelEnabled: false,
@@ -195,8 +244,15 @@ async function loadChinaMap() {
     polygonOffsetUnits: -4,
   })
 
-  const group = new THREE.Group()
-  group.name = 'china-map'
+  const topZ = extrudeDepth + 0.008
+
+  if (mapRoot) {
+    scene.remove(mapRoot)
+    disposeObject3D(mapRoot)
+  }
+
+  mapRoot = new THREE.Group()
+  mapRoot.name = 'china-map'
 
   for (const feature of data.features) {
     const geom = feature.geometry
@@ -208,9 +264,7 @@ async function loadChinaMap() {
       try {
         const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings)
         const mesh = new THREE.Mesh(geo, mapMaterial)
-        mesh.renderOrder = 0
 
-        const topZ = extrudeDepth + 0.008
         for (let ri = 0; ri < rings.length; ri++) {
           const pts2 = ringToVector2s(rings[ri], lngLatToVector2)
           if (!pts2) continue
@@ -221,27 +275,31 @@ async function loadChinaMap() {
           mesh.add(line)
         }
 
-        group.add(mesh)
+        mapRoot.add(mesh)
       } catch {
         /* 退化环等跳过 */
       }
     })
   }
 
-  group.updateMatrixWorld(true)
-  const box = new THREE.Box3().setFromObject(group)
-  const center = new THREE.Vector3()
-  box.getCenter(center)
-  group.position.sub(center)
+  mapRoot.updateMatrixWorld(true)
+  _tmpBox.setFromObject(mapRoot)
+  _tmpBox.getCenter(_tmpVec)
+  mapRoot.position.sub(_tmpVec)
 
   addDebugFrame(mapExtent)
-  scene.add(group)
+  scene.add(mapRoot)
 }
 
-function animate() {
-  requestAnimationFrame(animate)
-  controls.update()
-  composer.render()
+function startAnimationLoop() {
+  if (animationStarted) return
+  animationStarted = true
+  function frame() {
+    rafId = requestAnimationFrame(frame)
+    controls.update()
+    composer.render()
+  }
+  frame()
 }
 
 initMap()
